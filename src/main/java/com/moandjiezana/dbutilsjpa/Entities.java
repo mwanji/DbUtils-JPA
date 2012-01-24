@@ -1,0 +1,98 @@
+package com.moandjiezana.dbutilsjpa;
+
+import java.beans.IntrospectionException;
+import java.beans.Introspector;
+import java.beans.PropertyDescriptor;
+import java.lang.reflect.AccessibleObject;
+import java.lang.reflect.AnnotatedElement;
+import java.lang.reflect.Field;
+import java.lang.reflect.Member;
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
+
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.Id;
+import javax.persistence.ManyToOne;
+import javax.persistence.MappedSuperclass;
+import javax.persistence.OneToMany;
+import javax.persistence.OneToOne;
+import javax.persistence.Table;
+import javax.persistence.Transient;
+
+public class Entities {
+
+  public static AccessibleObject getIdAccessor(Class<?> type) {
+    for (Method method : type.getMethods()) {
+      if (method.isAnnotationPresent(Id.class)) {
+        return method;
+      }
+    }
+
+    for (Field field : type.getDeclaredFields()) {
+      if (field.isAnnotationPresent(Id.class)) {
+        return field;
+      }
+    }
+
+    throw new IllegalArgumentException(type.getName() + " does not have a field or property annotated with @Id");
+  }
+  
+  public static String getName(Class<?> entityClass) {
+    if (entityClass.isAnnotationPresent(Table.class)) {
+      String name = entityClass.getAnnotation(Table.class).name();
+      if (!name.isEmpty()) {
+        return name;
+      }
+    }
+    
+    return entityClass.getSimpleName();
+  }
+  
+  public static String getName(AccessibleObject accessibleObject) {
+    if (accessibleObject.isAnnotationPresent(Column.class)) {
+      String name = accessibleObject.getAnnotation(Column.class).name();
+      if (!name.isEmpty()) {
+        return name;
+      }
+    }
+    
+    if (accessibleObject instanceof Field) {
+      return ((Field) accessibleObject).getName();
+    }
+    
+    Method method = (Method) accessibleObject;
+    
+    try {
+      PropertyDescriptor[] propertyDescriptors = Introspector.getBeanInfo(method.getDeclaringClass()).getPropertyDescriptors();
+      for (PropertyDescriptor propertyDescriptor : propertyDescriptors) {
+        if (method.equals(propertyDescriptor.getReadMethod())) {
+          return propertyDescriptor.getName();
+        }
+      }
+    } catch (IntrospectionException e) {
+      throw new RuntimeException(e);
+    }
+    
+    throw new IllegalArgumentException("No column name can be derived from " + method + ". Make sure it is a getter.");
+    
+  }
+  
+  public static boolean isTransient(AccessibleObject accessibleObject) {
+    return Modifier.isTransient(((Member) accessibleObject).getModifiers()) || accessibleObject.isAnnotationPresent(Transient.class);
+  }
+  
+  public static boolean isRelation(AccessibleObject accessibleObject) {
+    return accessibleObject.isAnnotationPresent(OneToMany.class) || accessibleObject.isAnnotationPresent(ManyToOne.class) || accessibleObject.isAnnotationPresent(OneToOne.class);
+  }
+  
+  public static boolean isIdAccessor(AnnotatedElement annotatedElement) {
+    return annotatedElement.isAnnotationPresent(Id.class);
+  }
+  
+  public static boolean isMapped(Class<?> objectClass) {
+    return objectClass.isAnnotationPresent(Entity.class) || objectClass.isAnnotationPresent(MappedSuperclass.class);
+  }
+
+  private Entities() {}
+}
