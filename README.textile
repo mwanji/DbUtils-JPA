@@ -2,9 +2,9 @@ DbUtils-JPA brings JPA's easy-to-use mapping annotations to "DbUtils":http://com
 
 h2. Main classes
 
-* *JpaBeanProcessor* uses JPA annotations to convert a java.sql.ResultSet to an @Entity.
-* *SqlWriter* generates SQL based on the annotations.
-* *JpaQueryRunner* provides a friendly, but limited, interface for common operations: get by id, update, insert and delete.
+* "JpaBeanProcessor":https://github.com/mwanji/DbUtils-JPA/blob/master/src/main/java/com/moandjiezana/dbutilsjpa/JpaBeanProcessor.java uses JPA annotations to convert a java.sql.ResultSet to an @Entity.
+* "SqlWriter":https://github.com/mwanji/DbUtils-JPA/blob/master/src/main/java/com/moandjiezana/dbutilsjpa/SqlWriter.java generates SQL based on the annotations.
+* "JpaQueryRunner":https://github.com/mwanji/DbUtils-JPA/blob/master/src/main/java/com/moandjiezana/dbutilsjpa/JpaQueryRunner.java provides a friendly, but limited, interface for common operations: get by id, update, insert and delete.
 
 h2. Example
 
@@ -36,7 +36,7 @@ List<MyEntity> myEntities = underlyingQueryRunner.query("SELECT * FROM MyEntity"
 h2. Supported annotations and attributes
 
 * Entity
-* Table
+* Table(name)
 * Id
 * Column(name, updateable, insertable)
 * Transient (and the transient keyword)
