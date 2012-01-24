@@ -1,7 +1,0 @@
-package com.moandjiezana.dbutilsjpa;
-
-public interface NewEntityTester {
-
-  boolean isNew(Object entity);
-
-}
