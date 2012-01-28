@@ -13,26 +13,21 @@ import java.util.List;
 import java.util.Map;
 
 import javax.persistence.Column;
-import javax.persistence.Table;
 
 public class SqlWriter {
 
   public String selectById(Class<?> entityClass, Object primaryKey) {
-    String table = entityClass.getSimpleName();
-    if (entityClass.isAnnotationPresent(Table.class)) {
-      String name = entityClass.getAnnotation(Table.class).name();
-      if (!name.isEmpty()) {
-        table = name;
-      }
-    }
-    
     AccessibleObject idAccessor = Entities.getIdAccessor(entityClass);
     if (!idAccessor.isAccessible()) {
       idAccessor.setAccessible(true);
     }
     String idColumnName = Entities.getName(idAccessor);
     
-    return "SELECT * FROM " + table + " WHERE " + idColumnName + "=?";
+    return select(entityClass) + " WHERE " + idColumnName + "=?";
+  }
+
+  public String select(Class<?> entityClass) {
+    return "SELECT * FROM " + Entities.getName(entityClass);
   }
 
   public String insert(Class<?> entityClass) {
@@ -105,7 +100,7 @@ public class SqlWriter {
   }
   
   private boolean isIgnorable(AccessibleObject accessibleObject) {
-    return !Entities.isMapped(((Member) accessibleObject).getDeclaringClass()) || Entities.isTransient(accessibleObject) || Entities.isIdAccessor(accessibleObject) || Entities.isRelation(accessibleObject);
+    return Entities.isStatic(((Member) accessibleObject)) || !Entities.isMapped(((Member) accessibleObject).getDeclaringClass()) || Entities.isTransient(accessibleObject) || Entities.isIdAccessor(accessibleObject) || Entities.isRelation(accessibleObject);
   }
   
   private boolean isMultiValued(Class<?> type) {

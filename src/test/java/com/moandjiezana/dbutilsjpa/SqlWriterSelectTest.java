@@ -15,6 +15,11 @@ public class SqlWriterSelectTest {
   private SqlWriter sqlWriter = new SqlWriter();
   
   @Test
+  public void should_select_all() {
+    assertEquals("SELECT * FROM myTableName", sqlWriter.select(CustomNameEntity.class));
+  }
+  
+  @Test
   public void should_use_field_annotations() {
     String sql = sqlWriter.selectById(CustomNameEntity.class, null);
     
