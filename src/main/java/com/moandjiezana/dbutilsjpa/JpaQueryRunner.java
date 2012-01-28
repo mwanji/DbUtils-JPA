@@ -19,6 +19,8 @@ import org.apache.commons.dbutils.QueryRunner;
 import org.apache.commons.dbutils.RowProcessor;
 import org.apache.commons.dbutils.handlers.BeanHandler;
 
+import com.moandjiezana.dbutilsjpa.internal.FieldBasedPropertyDescriptor;
+
 /**
  * Provides a JPA-friendly interface to the underlying QueryRunner.
  *

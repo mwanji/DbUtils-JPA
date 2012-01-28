@@ -24,6 +24,8 @@ import javax.persistence.Entity;
 
 import org.apache.commons.dbutils.BeanProcessor;
 
+import com.moandjiezana.dbutilsjpa.internal.FieldBasedPropertyDescriptor;
+
 public class JpaBeanProcessor extends BeanProcessor {
 
   private static final PropertyDescriptor[] EMPTY_PROPERTY_DESCRIPTOR_ARRAY = new PropertyDescriptor[0];

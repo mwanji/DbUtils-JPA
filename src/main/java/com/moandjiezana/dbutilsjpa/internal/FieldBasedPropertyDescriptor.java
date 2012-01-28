@@ -1,4 +1,4 @@
-package com.moandjiezana.dbutilsjpa;
+package com.moandjiezana.dbutilsjpa.internal;
 
 import java.beans.IntrospectionException;
 import java.beans.PropertyDescriptor;
