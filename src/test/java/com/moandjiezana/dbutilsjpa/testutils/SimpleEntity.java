@@ -6,6 +6,8 @@ import javax.persistence.Id;
 @Entity
 public class SimpleEntity {
 
+  private static final Object CONSTANT = new Object(); 
+  
   @Id
   private Long id;
   private String name;

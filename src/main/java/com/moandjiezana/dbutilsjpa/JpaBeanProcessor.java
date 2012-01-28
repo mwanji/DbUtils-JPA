@@ -21,7 +21,6 @@ import java.util.List;
 import java.util.Map;
 
 import javax.persistence.Entity;
-import javax.persistence.Transient;
 
 import org.apache.commons.dbutils.BeanProcessor;
 
@@ -253,6 +252,8 @@ public class JpaBeanProcessor extends BeanProcessor {
       } else if (parameterType.getName().equals("java.sql.Timestamp")) {
         value = new java.sql.Timestamp(((java.util.Date) value).getTime());
       }
+    } else if (Enum.class.isAssignableFrom(parameterType)) {
+      value = Enum.valueOf((Class<Enum>)parameterType, (String) value);
     }
     return value;
   }
@@ -298,7 +299,6 @@ public class JpaBeanProcessor extends BeanProcessor {
 
     } else if (type.equals(Boolean.TYPE) && Boolean.class.isInstance(value)) {
       return true;
-
     }
     return false;
   }
@@ -315,7 +315,7 @@ public class JpaBeanProcessor extends BeanProcessor {
 
     for (PropertyDescriptor propertyDescriptor : beanInfo.getPropertyDescriptors()) {
       Method readMethod = propertyDescriptor.getReadMethod();
-      if (Modifier.isTransient(readMethod.getModifiers()) || readMethod.isAnnotationPresent(Transient.class)) {
+      if (Entities.isTransient(readMethod) || Entities.isStatic(readMethod)) {
         continue;
       }
 
@@ -329,7 +329,7 @@ public class JpaBeanProcessor extends BeanProcessor {
     List<PropertyDescriptor> propertyDescriptors = new ArrayList<PropertyDescriptor>();
 
     for (Field field : c.getDeclaredFields()) {
-      if (Entities.isTransient(field)) {
+      if (Entities.isTransient(field) || Entities.isStatic(field)) {
         continue;
       }
 

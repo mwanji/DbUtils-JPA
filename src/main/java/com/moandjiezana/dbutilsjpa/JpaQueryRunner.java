@@ -7,6 +7,7 @@ import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
@@ -108,7 +109,7 @@ public class JpaQueryRunner {
           for (PropertyDescriptor propertyDescriptor : propertyDescriptors) {
             Method readMethod = propertyDescriptor.getReadMethod();
             if (readMethod.getDeclaringClass() != entityClass || Entities.isTransient(readMethod)
-                || Entities.isRelation(readMethod) || Entities.isIdAccessor(readMethod)) {
+                || Entities.isRelation(readMethod) || Entities.isIdAccessor(readMethod) || Modifier.isStatic(readMethod.getModifiers())) {
               continue;
             }
             if (isNew && readMethod.isAnnotationPresent(Column.class)
@@ -134,7 +135,7 @@ public class JpaQueryRunner {
       } else {
         for (Field field : entityClass.getDeclaredFields()) {
           if (field.getDeclaringClass() != entityClass || Entities.isTransient(field) || Entities.isRelation(field)
-              || Entities.isIdAccessor(field)) {
+              || Entities.isIdAccessor(field) || Modifier.isStatic(field.getModifiers())) {
             continue;
           }
           if (isNew && field.isAnnotationPresent(Column.class) && !field.getAnnotation(Column.class).insertable()) {

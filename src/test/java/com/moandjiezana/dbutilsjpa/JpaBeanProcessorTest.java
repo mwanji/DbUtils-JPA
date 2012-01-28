@@ -10,6 +10,7 @@ import java.sql.SQLException;
 import org.junit.Test;
 
 import com.moandjiezana.dbutilsjpa.testutils.CustomNamePropertyEntity;
+import com.moandjiezana.dbutilsjpa.testutils.EnumEntity;
 import com.moandjiezana.dbutilsjpa.testutils.SimpleEntity;
 import com.moandjiezana.dbutilsjpa.testutils.SimplePropertyEntity;
 
@@ -64,10 +65,32 @@ public class JpaBeanProcessorTest {
     
     assertEquals(Long.valueOf(3), entity.getId());
   }
+  
+  @Test
+  public void should_handle_enum() throws SQLException {
+    ResultSetMetaData metaData = mock(ResultSetMetaData.class);
+    when(metaData.getColumnCount()).thenReturn(2);
+    setColumnName(metaData, "id", 1);
+    setColumnName(metaData, "anEnum", 2);
+    
+    ResultSet resultSet = mock(ResultSet.class);
+    when(resultSet.getMetaData()).thenReturn(metaData);
+    setLongValue(resultSet, 1, 1L);
+    setStringValue(resultSet, 2, EnumEntity.SomeEnum.VALUE_2.name());
+    
+    EnumEntity entity = processor.toBean(resultSet, EnumEntity.class);
+    
+    assertEquals(EnumEntity.SomeEnum.VALUE_2, entity.anEnum);
+  }
 
   private void setLongValue(ResultSet resultSet, int columnIndex, Long columnValue) throws SQLException {
     when(resultSet.getObject(columnIndex)).thenReturn(columnValue);
     when(resultSet.getLong(columnIndex)).thenReturn(columnValue);
+  }
+
+  private void setStringValue(ResultSet resultSet, int columnIndex, String columnValue) throws SQLException {
+    when(resultSet.getObject(columnIndex)).thenReturn(columnValue);
+    when(resultSet.getString(columnIndex)).thenReturn(columnValue);
   }
 
   private void setColumnName(ResultSetMetaData metaData, String columnName, int columnIndex) throws SQLException {

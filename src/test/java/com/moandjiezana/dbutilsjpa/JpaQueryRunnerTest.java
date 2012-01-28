@@ -29,7 +29,7 @@ public class JpaQueryRunnerTest {
     
     runner.save(entity);
     
-    Mockito.verify(queryRunner).update("UPDATE SimpleEntity SET name=? WHERE id=?", name.get(), entity.getId());
+    verify(queryRunner).update("UPDATE SimpleEntity SET name=? WHERE id=?", name.get(), entity.getId());
   }
   
   @Test
