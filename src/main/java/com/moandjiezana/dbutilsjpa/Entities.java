@@ -93,6 +93,10 @@ public class Entities {
   public static boolean isMapped(Class<?> objectClass) {
     return objectClass.isAnnotationPresent(Entity.class) || objectClass.isAnnotationPresent(MappedSuperclass.class);
   }
+  
+  public static boolean isStatic(Member member) {
+    return Modifier.isStatic(member.getModifiers());
+  }
 
   private Entities() {}
 }
