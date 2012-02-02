@@ -24,11 +24,11 @@ import javax.persistence.Entity;
 
 import org.apache.commons.dbutils.BeanProcessor;
 
-import com.moandjiezana.dbutilsjpa.internal.FieldBasedPropertyDescriptor;
+import com.moandjiezana.dbutilsjpa.internal.PropertyDescriptorWrapper;
 
 public class JpaBeanProcessor extends BeanProcessor {
 
-  private static final PropertyDescriptor[] EMPTY_PROPERTY_DESCRIPTOR_ARRAY = new PropertyDescriptor[0];
+  private static final PropertyDescriptorWrapper[] EMPTY_PROPERTY_DESCRIPTOR_ARRAY = new PropertyDescriptorWrapper[0];
 
   /**
    * Special array value used by <code>mapColumnsToProperties</code> that
@@ -58,7 +58,7 @@ public class JpaBeanProcessor extends BeanProcessor {
   @Override
   public <T> T toBean(ResultSet rs, Class<T> type) throws SQLException {
     checkIsEntity(type);
-    PropertyDescriptor[] props = propertyDescriptors(type);
+    PropertyDescriptorWrapper[] props = propertyDescriptors(type);
 
     ResultSetMetaData rsmd = rs.getMetaData();
     int[] columnToProperty = mapColumnsToProperties(rsmd, props);
@@ -76,7 +76,7 @@ public class JpaBeanProcessor extends BeanProcessor {
     
     List<T> results = new ArrayList<T>();
 
-    PropertyDescriptor[] props = propertyDescriptors(type);
+    PropertyDescriptorWrapper[] props = propertyDescriptors(type);
     ResultSetMetaData rsmd = rs.getMetaData();
     int[] columnsToProperties = mapColumnsToProperties(rsmd, props);
 
@@ -137,10 +137,10 @@ public class JpaBeanProcessor extends BeanProcessor {
     }
   }
 
-  private <T> PropertyDescriptor[] propertyDescriptors(Class<T> type) {
+  private <T> PropertyDescriptorWrapper[] propertyDescriptors(Class<T> type) {
     AccessibleObject idAccessor = getIdAccessor(type);
 
-    PropertyDescriptor[] propertyDescriptors;
+    PropertyDescriptorWrapper[] propertyDescriptors;
     if (idAccessor instanceof Method) {
       propertyDescriptors = getPropertyDescriptorsFromMethods(type);
     } else {
@@ -176,7 +176,7 @@ public class JpaBeanProcessor extends BeanProcessor {
    * @throws SQLException
    *           if a database error occurs.
    */
-  private <T> T createBean(ResultSet rs, Class<T> type, PropertyDescriptor[] props, int[] columnToProperty)
+  private <T> T createBean(ResultSet rs, Class<T> type, PropertyDescriptorWrapper[] props, int[] columnToProperty)
       throws SQLException {
 
     T bean = this.newInstance(type);
@@ -186,7 +186,7 @@ public class JpaBeanProcessor extends BeanProcessor {
         continue;
       }
 
-      PropertyDescriptor prop = props[columnToProperty[i]];
+      PropertyDescriptorWrapper prop = props[columnToProperty[i]];
       Class<?> propType = prop.getPropertyType();
 
       Object value = this.processColumn(rs, i, propType);
@@ -214,7 +214,7 @@ public class JpaBeanProcessor extends BeanProcessor {
    * @throws SQLException
    *           if an error occurs setting the property.
    */
-  private void callSetter(Object target, PropertyDescriptor prop, Object value) throws SQLException {
+  private void callSetter(Object target, PropertyDescriptorWrapper prop, Object value) throws SQLException {
     
     Class<?> parameterType = prop.getPropertyType();
     try {
@@ -225,22 +225,12 @@ public class JpaBeanProcessor extends BeanProcessor {
 
       // Don't call setter if the value object isn't the right type
       if (this.isCompatibleType(value, parameterType)) {
-        if (prop instanceof FieldBasedPropertyDescriptor) {
-          ((FieldBasedPropertyDescriptor) prop).field.set(target, value);
-        } else {
-          prop.getWriteMethod().invoke(target, new Object[] { value });
-        }
+        prop.set(target, value);
       } else {
         throw new SQLException("Cannot set " + prop.getName() + ": incompatible types.");
       }
 
     } catch (IllegalArgumentException e) {
-      throw new SQLException("Cannot set " + prop.getName() + ": " + e.getMessage());
-
-    } catch (IllegalAccessException e) {
-      throw new SQLException("Cannot set " + prop.getName() + ": " + e.getMessage());
-
-    } catch (InvocationTargetException e) {
       throw new SQLException("Cannot set " + prop.getName() + ": " + e.getMessage());
     }
   }
@@ -305,30 +295,30 @@ public class JpaBeanProcessor extends BeanProcessor {
     return false;
   }
 
-  private PropertyDescriptor[] getPropertyDescriptorsFromMethods(Class<?> c) {
+  private PropertyDescriptorWrapper[] getPropertyDescriptorsFromMethods(Class<?> c) {
     BeanInfo beanInfo = null;
     try {
       beanInfo = Introspector.getBeanInfo(c);
+      
+      List<PropertyDescriptorWrapper> propertyDescriptors = new ArrayList<PropertyDescriptorWrapper>();
+      
+      for (PropertyDescriptor propertyDescriptor : beanInfo.getPropertyDescriptors()) {
+        Method readMethod = propertyDescriptor.getReadMethod();
+        if (Entities.isTransient(readMethod) || Entities.isStatic(readMethod)) {
+          continue;
+        }
+        
+        propertyDescriptors.add(new PropertyDescriptorWrapper(propertyDescriptor));
+      }
+      
+      return propertyDescriptors.toArray(EMPTY_PROPERTY_DESCRIPTOR_ARRAY);
     } catch (IntrospectionException e) {
       throw new RuntimeException(e);
     }
-
-    List<PropertyDescriptor> propertyDescriptors = new ArrayList<PropertyDescriptor>();
-
-    for (PropertyDescriptor propertyDescriptor : beanInfo.getPropertyDescriptors()) {
-      Method readMethod = propertyDescriptor.getReadMethod();
-      if (Entities.isTransient(readMethod) || Entities.isStatic(readMethod)) {
-        continue;
-      }
-
-      propertyDescriptors.add(propertyDescriptor);
-    }
-
-    return propertyDescriptors.toArray(EMPTY_PROPERTY_DESCRIPTOR_ARRAY);
   }
 
-  private PropertyDescriptor[] getPropertyDescriptorsFromFields(Class<?> c) {
-    List<PropertyDescriptor> propertyDescriptors = new ArrayList<PropertyDescriptor>();
+  private PropertyDescriptorWrapper[] getPropertyDescriptorsFromFields(Class<?> c) {
+    List<PropertyDescriptorWrapper> propertyDescriptors = new ArrayList<PropertyDescriptorWrapper>();
 
     for (Field field : c.getDeclaredFields()) {
       if (Entities.isTransient(field) || Entities.isStatic(field)) {
@@ -338,7 +328,7 @@ public class JpaBeanProcessor extends BeanProcessor {
       String propertyName = Entities.getName(field);
 
       try {
-        propertyDescriptors.add(new FieldBasedPropertyDescriptor(propertyName, field));
+        propertyDescriptors.add(new PropertyDescriptorWrapper(propertyName, field));
       } catch (IntrospectionException e) {
         throw new RuntimeException(e);
       }

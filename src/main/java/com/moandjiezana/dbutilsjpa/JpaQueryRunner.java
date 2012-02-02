@@ -19,7 +19,7 @@ import org.apache.commons.dbutils.QueryRunner;
 import org.apache.commons.dbutils.RowProcessor;
 import org.apache.commons.dbutils.handlers.BeanHandler;
 
-import com.moandjiezana.dbutilsjpa.internal.FieldBasedPropertyDescriptor;
+import com.moandjiezana.dbutilsjpa.internal.PropertyDescriptorWrapper;
 
 /**
  * Provides a JPA-friendly interface to the underlying QueryRunner.
@@ -104,7 +104,7 @@ public class JpaQueryRunner {
       boolean isNew = entityTester.isNew(entity);
 
       AccessibleObject idAccessor = Entities.getIdAccessor(entityClass);
-      List<PropertyDescriptor> pD = new ArrayList<PropertyDescriptor>();
+      List<PropertyDescriptorWrapper> pD = new ArrayList<PropertyDescriptorWrapper>();
       if (idAccessor instanceof Method) {
         try {
           PropertyDescriptor[] propertyDescriptors = Introspector.getBeanInfo(entityClass).getPropertyDescriptors();
@@ -122,12 +122,12 @@ public class JpaQueryRunner {
               continue;
             }
 
-            pD.add(propertyDescriptor);
+            pD.add(new PropertyDescriptorWrapper(propertyDescriptor));
           }
           if (!isNew) {
             for (PropertyDescriptor propertyDescriptor : propertyDescriptors) {
               if (Entities.isIdAccessor(propertyDescriptor.getReadMethod())) {
-                pD.add(propertyDescriptor);
+                pD.add(new PropertyDescriptorWrapper(propertyDescriptor));
               }
             }
           }
@@ -145,12 +145,12 @@ public class JpaQueryRunner {
           } else if (field.isAnnotationPresent(Column.class) && !field.getAnnotation(Column.class).updatable()) {
             continue;
           }
-          pD.add(new FieldBasedPropertyDescriptor(Entities.getName(field), field));
+          pD.add(new PropertyDescriptorWrapper(Entities.getName(field), field));
         }
         if (!isNew) {
           for (Field field : entityClass.getDeclaredFields()) {
             if (Entities.isIdAccessor(field)) {
-              pD.add(new FieldBasedPropertyDescriptor(Entities.getName(field), field));
+              pD.add(new PropertyDescriptorWrapper(Entities.getName(field), field));
             }
           }
         }
@@ -158,11 +158,10 @@ public class JpaQueryRunner {
 
       Object[] args = new Object[pD.size()];
       for (int i = 0; i < args.length; i++) {
-        PropertyDescriptor propertyDescriptor = pD.get(i);
-        if (propertyDescriptor instanceof FieldBasedPropertyDescriptor) {
-          args[i] = ((FieldBasedPropertyDescriptor) propertyDescriptor).field.get(entity);
-        } else {
-          args[i] = propertyDescriptor.getReadMethod().invoke(entity);
+        PropertyDescriptorWrapper propertyDescriptor = pD.get(i);
+          args[i] = propertyDescriptor.get(entity);
+        if (args[i] != null && Enum.class.isAssignableFrom(args[i].getClass())) {
+          args[i] = args[i].toString();
         }
       }
 
@@ -173,10 +172,6 @@ public class JpaQueryRunner {
       }
     } catch (SQLException e) {
       throw new RuntimeException(e);
-    } catch (IllegalAccessException e) {
-      throw new RuntimeException(e);
-    } catch (InvocationTargetException e) {
-      throw new RuntimeException(e.getCause());
     } catch (IntrospectionException e) {
       throw new RuntimeException(e);
     }
