@@ -2,8 +2,10 @@ package com.moandjiezana.dbutilsjpa.internal;
 
 import java.beans.IntrospectionException;
 import java.beans.PropertyDescriptor;
+import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Member;
 
 public class PropertyDescriptorWrapper extends PropertyDescriptor {
   
@@ -56,5 +58,13 @@ public class PropertyDescriptorWrapper extends PropertyDescriptor {
     } catch (InvocationTargetException e) {
       throw new RuntimeException(e);
     }
+  }
+  
+  public AccessibleObject getAccessibleObject() {
+    return field != null ? field : propertyDescriptor.getReadMethod();
+  }
+  
+  public Member getMember() {
+    return field != null ? field : propertyDescriptor.getReadMethod();
   }
 }
