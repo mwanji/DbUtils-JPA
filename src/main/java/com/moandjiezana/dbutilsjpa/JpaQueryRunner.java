@@ -6,6 +6,7 @@ import java.beans.PropertyDescriptor;
 import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Member;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.sql.SQLException;
@@ -18,6 +19,7 @@ import org.apache.commons.dbutils.BasicRowProcessor;
 import org.apache.commons.dbutils.QueryRunner;
 import org.apache.commons.dbutils.RowProcessor;
 import org.apache.commons.dbutils.handlers.BeanHandler;
+import org.apache.commons.dbutils.handlers.ScalarHandler;
 
 import com.moandjiezana.dbutilsjpa.internal.PropertyDescriptorWrapper;
 
@@ -28,6 +30,7 @@ import com.moandjiezana.dbutilsjpa.internal.PropertyDescriptorWrapper;
 */
 public class JpaQueryRunner {
 
+  private static final ScalarHandler<Long> DEFAULT_GENERATED_KEYS_HANDLER = new ScalarHandler<Long>();
   private static final SqlWriter DEFAULT_SQL_WRITER = new SqlWriter();
   private static final BasicRowProcessor DEFAULT_ROW_PROCESSOR = new BasicRowProcessor(new JpaBeanProcessor());
   private static final NewEntityTester DEFAULT_ENTITY_TESTER = new NewEntityTester() {
@@ -105,53 +108,48 @@ public class JpaQueryRunner {
 
       AccessibleObject idAccessor = Entities.getIdAccessor(entityClass);
       List<PropertyDescriptorWrapper> pD = new ArrayList<PropertyDescriptorWrapper>();
+      PropertyDescriptorWrapper idPropertyDescriptor = null;
+      PropertyDescriptorWrapper[] propertyDescriptorWrappers = null;
       if (idAccessor instanceof Method) {
-        try {
-          PropertyDescriptor[] propertyDescriptors = Introspector.getBeanInfo(entityClass).getPropertyDescriptors();
-          for (PropertyDescriptor propertyDescriptor : propertyDescriptors) {
-            Method readMethod = propertyDescriptor.getReadMethod();
-            if (readMethod.getDeclaringClass() != entityClass || Entities.isTransient(readMethod)
-                || Entities.isRelation(readMethod) || Entities.isIdAccessor(readMethod) || Modifier.isStatic(readMethod.getModifiers())) {
-              continue;
-            }
-            if (isNew && readMethod.isAnnotationPresent(Column.class)
-                && !readMethod.getAnnotation(Column.class).insertable()) {
-              // continue;
-            } else if (readMethod.isAnnotationPresent(Column.class)
-                && !readMethod.getAnnotation(Column.class).updatable()) {
-              continue;
-            }
-
-            pD.add(new PropertyDescriptorWrapper(propertyDescriptor));
-          }
-          if (!isNew) {
-            for (PropertyDescriptor propertyDescriptor : propertyDescriptors) {
-              if (Entities.isIdAccessor(propertyDescriptor.getReadMethod())) {
-                pD.add(new PropertyDescriptorWrapper(propertyDescriptor));
-              }
-            }
-          }
-        } catch (IntrospectionException e) {
-          throw new RuntimeException(e);
+        PropertyDescriptor[] propertyDescriptors = Introspector.getBeanInfo(entityClass).getPropertyDescriptors();
+        propertyDescriptorWrappers = new PropertyDescriptorWrapper[propertyDescriptors.length];
+        for (int i = 0; i < propertyDescriptorWrappers.length; i++) {
+          propertyDescriptorWrappers[i] = new PropertyDescriptorWrapper(propertyDescriptors[i]);
         }
       } else {
-        for (Field field : entityClass.getDeclaredFields()) {
-          if (field.getDeclaringClass() != entityClass || Entities.isTransient(field) || Entities.isRelation(field)
-              || Entities.isIdAccessor(field) || Modifier.isStatic(field.getModifiers())) {
-            continue;
-          }
-          if (isNew && field.isAnnotationPresent(Column.class) && !field.getAnnotation(Column.class).insertable()) {
-            // continue;
-          } else if (field.isAnnotationPresent(Column.class) && !field.getAnnotation(Column.class).updatable()) {
-            continue;
-          }
-          pD.add(new PropertyDescriptorWrapper(Entities.getName(field), field));
+        propertyDescriptorWrappers = new PropertyDescriptorWrapper[entityClass.getDeclaredFields().length];
+        for (int i = 0; i < propertyDescriptorWrappers.length; i++) {
+          Field field = entityClass.getDeclaredFields()[i];
+          propertyDescriptorWrappers[i] = new PropertyDescriptorWrapper(Entities.getName(entityClass.getDeclaredFields()[i]), field);
         }
-        if (!isNew) {
-          for (Field field : entityClass.getDeclaredFields()) {
-            if (Entities.isIdAccessor(field)) {
-              pD.add(new PropertyDescriptorWrapper(Entities.getName(field), field));
-            }
+      }
+      
+      for (PropertyDescriptorWrapper propertyDescriptorWrapper : propertyDescriptorWrappers) {
+        AccessibleObject accessibleObject = propertyDescriptorWrapper.getAccessibleObject();
+        Member member = propertyDescriptorWrapper.getMember();
+        
+        if (!Entities.isMapped(member.getDeclaringClass()) || Entities.isTransient(accessibleObject)
+            || Entities.isRelation(accessibleObject) || Modifier.isStatic(member.getModifiers())) {
+          continue;
+        }
+
+        if (Entities.isIdAccessor(accessibleObject)) {
+          idPropertyDescriptor = propertyDescriptorWrapper;
+          continue;
+        }
+        
+        if (isNew && accessibleObject.isAnnotationPresent(Column.class) && !accessibleObject.getAnnotation(Column.class).insertable()) {
+          // continue;
+        } else if (accessibleObject.isAnnotationPresent(Column.class) && !accessibleObject.getAnnotation(Column.class).updatable()) {
+          continue;
+        }
+        
+        pD.add(propertyDescriptorWrapper);
+      }
+      if (!isNew) {
+        for (PropertyDescriptorWrapper propertyDescriptorWrapper : propertyDescriptorWrappers) {
+          if (Entities.isIdAccessor(propertyDescriptorWrapper.getAccessibleObject())) {
+            pD.add(propertyDescriptorWrapper);
           }
         }
       }
@@ -166,7 +164,12 @@ public class JpaQueryRunner {
       }
 
       if (isNew) {
-        return queryRunner.update(sqlWriter.insert(entityClass), args);
+        Long newId = queryRunner.insert(sqlWriter.insert(entityClass), DEFAULT_GENERATED_KEYS_HANDLER, args);
+        if (idPropertyDescriptor != null) {
+          idPropertyDescriptor.set(entity, newId);
+        }
+        
+        return 1;
       } else {
         return queryRunner.update(sqlWriter.updateById(entityClass), args);
       }

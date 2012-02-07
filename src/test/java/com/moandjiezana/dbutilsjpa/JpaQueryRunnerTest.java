@@ -1,13 +1,16 @@
 package com.moandjiezana.dbutilsjpa;
 
-import static org.mockito.Mockito.verify;
+import static org.fest.reflect.core.Reflection.field;
+import static org.mockito.Mockito.*;
 
 import java.sql.SQLException;
 import java.util.Date;
 
 import org.apache.commons.dbutils.QueryRunner;
+import org.apache.commons.dbutils.ResultSetHandler;
 import org.fest.reflect.core.Reflection;
 import org.fest.reflect.field.Invoker;
+import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.Mockito;
 
@@ -56,13 +59,15 @@ public class JpaQueryRunnerTest {
   
   @Test
   public void should_insert_new_entity() throws SQLException {
+    
     SimpleEntity entity = new SimpleEntity();
-    Invoker<String> name = Reflection.field("name").ofType(String.class).in(entity);
+    Invoker<String> name = field("name").ofType(String.class).in(entity);
     name.set("a name");
+    stub(queryRunner.insert(Mockito.eq("INSERT INTO SimpleEntity(name) VALUES(?)"), Mockito.any(ResultSetHandler.class), Mockito.eq(name.get()))).toReturn(5L);
     
     runner.save(entity);
     
-    verify(queryRunner).update("INSERT INTO SimpleEntity(name) VALUES(?)", new Object[] { name.get() });
+    Assert.assertEquals(5, field("id").ofType(Long.class).in(entity).get().longValue());
   }
   
   @Test
@@ -71,6 +76,6 @@ public class JpaQueryRunnerTest {
     
     runner.save(entity);
     
-    verify(queryRunner).update("INSERT INTO NonUpdatableEntity(name,notUpdated) VALUES(?,?)", entity.getName(), entity.getNotUpdated());
+    verify(queryRunner).insert(Mockito.eq("INSERT INTO NonUpdatableEntity(name,notUpdated) VALUES(?,?)"), Mockito.any(ResultSetHandler.class), Mockito.eq(entity.getName()), Mockito.eq(entity.getNotUpdated()));
   }
 }
