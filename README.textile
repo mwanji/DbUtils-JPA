@@ -10,11 +10,12 @@ h2. Example
 
 <pre><code>
   JpaQueryRunner queryRunner = new JpaQueryRunner(underlyingQueryRunner); // this instance can be cached and re-used
-  
+
   MyEntity newEntity = new MyEntity();
   newEntity.setName("Bob");
   newEntity.age = 42;
   queryRunner.save(newEntity); // executes an INSERT
+  assert newEntity.getId() == 2L; // the generated primary key has been set
     
   MyEntity savedEntity = queryRunner.query(MyEntity.class, 1L); // executes a SELECT
   savedEntity.setName("Alice");
@@ -28,7 +29,7 @@ The JpaQueryRunner always requires that you give it a QueryRunner. It can use a 
 
 h2. Using elements independently
 
-JpaBeanProcessor can be used apart from JpaQueryRunner, in conjunction with a RowProcessor and a ResultSetHandler, just like any other BeanProcessor, to use JPA mapping in situations not handled by JpaQueryRunner.
+JpaBeanProcessor can be used apart from JpaQueryRunner, in conjunction with a RowProcessor and a ResultSetHandler, just like any other BeanProcessor, to use JPA mappings in cases not handled by JpaQueryRunner.
 
 <pre><code>ResultSetHandler<List<MyEntity>> handler = new BeanListHandler<MyEntity>(MyEntity.class, new BasicRowProcessor(new JpaBeanProcessor()));
 List<MyEntity> myEntities = underlyingQueryRunner.query("SELECT * FROM MyEntity", handler);</code></pre>
@@ -41,14 +42,6 @@ h2. Supported annotations and attributes
 * Column(name, updateable, insertable)
 * Transient (and the transient keyword)
 
-h3. Todo
-
-* OrderBy
-* Use OneToMany, ManyToOne and OneToOne for joins.
-* Basic(fetchType)
-* Embeddable, Embedded
-* IdClass, EmbeddedId
-
 h3. Limitations
 
 The semantics of JPA's annotations are followed as much as possible. However, as DbUtils-JPA does not enforce constraints or DDL instructions, certain annotations are ignored, such as @Column(nullable).
@@ -56,6 +49,14 @@ The semantics of JPA's annotations are followed as much as possible. However, as
 Like DbUtils itself, DbUtils-JPA does not map joins. OneToMany, ManyToOne and OneToOne are ignored. This may be added in the future.
 
 To validate your entities, use a Bean Validation API implementation such as "Hibernate Validator":http://www.hibernate.org/subprojects/validator.html or "Apache Bean Validator":http://incubator.apache.org/bval/cwiki/index.html.
+
+h3. Todo
+
+* OrderBy
+* Use OneToMany, ManyToOne and OneToOne for joins.
+* Basic(fetchType)
+* Embeddable, Embedded
+* IdClass, EmbeddedId
 
 h2. License
 
