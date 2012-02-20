@@ -29,22 +29,22 @@ The JpaQueryRunner always requires that you give it a QueryRunner. It can use a 
 
 h2. Using elements independently
 
-JpaBeanProcessor can be used apart from JpaQueryRunner, in conjunction with a RowProcessor and a ResultSetHandler, just like any other BeanProcessor, to use JPA mappings in cases not handled by JpaQueryRunner.
+JpaBeanProcessor can be used apart from JpaQueryRunner, in conjunction with a RowProcessor and a ResultSetHandler, just like any other "BeanProcessor":http://commons.apache.org/dbutils/apidocs/org/apache/commons/dbutils/RowProcessor.html, to use JPA mappings in cases not handled by JpaQueryRunner.
 
 <pre><code>ResultSetHandler<List<MyEntity>> handler = new BeanListHandler<MyEntity>(MyEntity.class, new BasicRowProcessor(new JpaBeanProcessor()));
-List<MyEntity> myEntities = underlyingQueryRunner.query("SELECT * FROM MyEntity", handler);</code></pre>
+List<MyEntity> myEntities = queryRunner.query("SELECT * FROM MyEntity", handler);</code></pre>
 
 h2. Supported annotations and attributes
 
 * Entity
 * Table(name)
 * Id
-* Column(name, updateable, insertable)
+* Column(name, updatable, insertable)
 * Transient (and the transient keyword)
 
 h3. Limitations
 
-The semantics of JPA's annotations are followed as much as possible. However, as DbUtils-JPA does not enforce constraints or DDL instructions, certain annotations are ignored, such as @Column(nullable).
+The semantics of JPA's annotations are followed as much as possible. However, as DbUtils-JPA does not enforce constraints or DDL instructions, certain annotations are ignored, such as @Column#nullable.
 
 Like DbUtils itself, DbUtils-JPA does not map joins. OneToMany, ManyToOne and OneToOne are ignored. This may be added in the future.
 
