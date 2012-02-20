@@ -26,9 +26,17 @@ public class NonUpdatableEntity {
   public String getName() {
     return name;
   }
+  
+  public void setName(String name) {
+    this.name = name;
+  }
 
   public String getNotUpdated() {
     return notUpdated;
+  }
+
+  public void setNotUpdated(String notUpdated) {
+    this.notUpdated = notUpdated;
   }
 
   public String getNotInserted() {
