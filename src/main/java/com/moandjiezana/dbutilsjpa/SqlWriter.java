@@ -8,6 +8,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Member;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -56,11 +57,11 @@ public class SqlWriter {
     return "DELETE FROM " + Entities.getName(entityClass) + " WHERE " + Entities.getName(Entities.getIdAccessor(entityClass)) + "=?";
   }
 
-  public String updateById(Class<?> entityClass) {
+  public String updateById(Class<?> entityClass, String... columns) {
     StringBuilder sb = new StringBuilder("UPDATE ").append(Entities.getName(entityClass)).append(" SET");
     
     AccessibleObject idAccessor = Entities.getIdAccessor(entityClass);
-    List<String> columnNames = getColumnNames(entityClass, idAccessor, NOT_UPDATABLE);
+    List<String> columnNames = columns.length == 0 ? getColumnNames(entityClass, idAccessor, NOT_UPDATABLE) : Arrays.asList(columns);
     
     for (int i = 0; i < columnNames.size(); i++) {
       sb.append(" ").append(columnNames.get(i)).append("=?");

@@ -6,6 +6,7 @@ import org.junit.Test;
 
 import com.moandjiezana.dbutilsjpa.testutils.CustomNamePropertyEntity;
 import com.moandjiezana.dbutilsjpa.testutils.EntityWithRelations;
+import com.moandjiezana.dbutilsjpa.testutils.MultiplePropertyEntity;
 import com.moandjiezana.dbutilsjpa.testutils.SimpleEntity;
 
 public class SqlWriterUpdateTest {
@@ -31,5 +32,12 @@ public class SqlWriterUpdateTest {
     String sql = sqlWriter.updateById(CustomNamePropertyEntity.class);
     
     assertEquals("UPDATE myTableName SET customDateColumn=? WHERE customNameId=?", sql);
+  }
+  
+  @Test
+  public void should_update_specified_columns() {
+    String sql = sqlWriter.updateById(MultiplePropertyEntity.class, "age");
+    
+    assertEquals("UPDATE MultiplePropertyEntity SET age=? WHERE id=?", sql);
   }
 }
