@@ -17,6 +17,7 @@ import javax.persistence.Column;
 
 import org.apache.commons.dbutils.BasicRowProcessor;
 import org.apache.commons.dbutils.QueryRunner;
+import org.apache.commons.dbutils.ResultSetHandler;
 import org.apache.commons.dbutils.RowProcessor;
 import org.apache.commons.dbutils.handlers.BeanHandler;
 import org.apache.commons.dbutils.handlers.ScalarHandler;
@@ -58,17 +59,19 @@ public class JpaQueryRunner {
   private final SqlWriter sqlWriter;
   private final NewEntityTester entityTester;
   private final RowProcessor rowProcessor;
+  private final ResultSetHandler<?> generatedKeysHandler;
 
   public JpaQueryRunner(QueryRunner queryRunner) {
-    this(queryRunner, DEFAULT_SQL_WRITER, DEFAULT_ENTITY_TESTER, DEFAULT_ROW_PROCESSOR);
+    this(queryRunner, DEFAULT_SQL_WRITER, DEFAULT_ENTITY_TESTER, DEFAULT_ROW_PROCESSOR, DEFAULT_GENERATED_KEYS_HANDLER);
   }
 
   public JpaQueryRunner(QueryRunner queryRunner, SqlWriter sqlWriter, NewEntityTester entityTester,
-      RowProcessor rowProcessor) {
+      RowProcessor rowProcessor, ResultSetHandler<?> generatedKeysHandler) {
     this.queryRunner = queryRunner;
     this.sqlWriter = sqlWriter;
     this.entityTester = entityTester;
     this.rowProcessor = rowProcessor;
+    this.generatedKeysHandler = generatedKeysHandler;
   }
 
   /**
@@ -139,8 +142,8 @@ public class JpaQueryRunner {
         }
         
         if (isNew && accessibleObject.isAnnotationPresent(Column.class) && !accessibleObject.getAnnotation(Column.class).insertable()) {
-          // continue;
-        } else if (accessibleObject.isAnnotationPresent(Column.class) && !accessibleObject.getAnnotation(Column.class).updatable()) {
+          continue;
+        } else if (!isNew && accessibleObject.isAnnotationPresent(Column.class) && !accessibleObject.getAnnotation(Column.class).updatable()) {
           continue;
         }
         
@@ -164,7 +167,7 @@ public class JpaQueryRunner {
       }
 
       if (isNew) {
-        Long newId = queryRunner.insert(sqlWriter.insert(entityClass), DEFAULT_GENERATED_KEYS_HANDLER, args);
+        Object newId = queryRunner.insert(sqlWriter.insert(entityClass), generatedKeysHandler, args);
         if (idPropertyDescriptor != null) {
           idPropertyDescriptor.set(entity, newId);
         }

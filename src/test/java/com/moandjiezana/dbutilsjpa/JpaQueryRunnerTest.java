@@ -8,6 +8,7 @@ import java.util.Date;
 
 import org.apache.commons.dbutils.QueryRunner;
 import org.apache.commons.dbutils.ResultSetHandler;
+import org.apache.commons.dbutils.handlers.ScalarHandler;
 import org.fest.reflect.core.Reflection;
 import org.fest.reflect.field.Invoker;
 import org.junit.Assert;
@@ -55,6 +56,17 @@ public class JpaQueryRunnerTest {
     runner.save(entity);
     
     verify(queryRunner).update("UPDATE NonUpdatableEntity SET name=?, notInserted=? WHERE id=?", entity.getName(), entity.getNotInserted(), entity.getId());
+  }
+  
+  @Test
+  public void should_include_non_updatable_column_on_insert() throws SQLException {
+    NonUpdatableEntity entity = new NonUpdatableEntity();
+    entity.setNotUpdated("included");
+    entity.setName("a name");
+    
+    runner.save(entity);
+    
+    verify(queryRunner).insert(Mockito.eq("INSERT INTO NonUpdatableEntity(name,notUpdated) VALUES(?,?)"), Mockito.any(ScalarHandler.class), Mockito.eq(entity.getName()), Mockito.eq(entity.getNotUpdated()));
   }
   
   @Test
