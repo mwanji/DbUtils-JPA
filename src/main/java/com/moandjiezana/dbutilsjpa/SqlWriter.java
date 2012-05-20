@@ -24,19 +24,19 @@ public class SqlWriter {
     }
     String idColumnName = Entities.getName(idAccessor);
     
-    return select(entityClass) + " WHERE " + idColumnName + "=?";
+    return select(entityClass) + where(idColumnName);
   }
 
   public String select(Class<?> entityClass) {
-    return "SELECT * FROM " + Entities.getName(entityClass);
+    return "SELECT * FROM " + quote(Entities.getName(entityClass));
   }
 
   public String insert(Class<?> entityClass) {
     List<String> columnNames = getColumnNames(entityClass, Entities.getIdAccessor(entityClass), NOT_INSERTABLE);
-    StringBuilder sb = new StringBuilder("INSERT INTO ").append(Entities.getName(entityClass)).append("(");
+    StringBuilder sb = new StringBuilder("INSERT INTO ").append(quote(Entities.getName(entityClass))).append("(");
     
     for (int i = 0; i < columnNames.size(); i++) {
-      sb.append(columnNames.get(i));
+      sb.append(quote(columnNames.get(i)));
       if (i + 1 < columnNames.size()) {
         sb.append(",");
       }
@@ -54,25 +54,56 @@ public class SqlWriter {
   }
 
   public String deleteById(Class<?> entityClass) {
-    return "DELETE FROM " + Entities.getName(entityClass) + " WHERE " + Entities.getName(Entities.getIdAccessor(entityClass)) + "=?";
+    return "DELETE FROM " + quote(Entities.getName(entityClass)) + " WHERE " + quote(Entities.getName(Entities.getIdAccessor(entityClass))) + "=?";
   }
 
   public String updateById(Class<?> entityClass, String... columns) {
-    StringBuilder sb = new StringBuilder("UPDATE ").append(Entities.getName(entityClass)).append(" SET");
+    StringBuilder sb = new StringBuilder("UPDATE ").append(quote(Entities.getName(entityClass))).append(" SET");
     
     AccessibleObject idAccessor = Entities.getIdAccessor(entityClass);
     List<String> columnNames = columns.length == 0 ? getColumnNames(entityClass, idAccessor, NOT_UPDATABLE) : Arrays.asList(columns);
     
     for (int i = 0; i < columnNames.size(); i++) {
-      sb.append(" ").append(columnNames.get(i)).append("=?");
+      sb.append(" ").append(quote(columnNames.get(i))).append("=?");
       if (i + 1 < columnNames.size()) {
         sb.append(",");
       }
     }
     
-    sb.append(" WHERE ").append(Entities.getName(idAccessor)).append("=?");
+    sb.append(where(Entities.getName(idAccessor)));
     
     return sb.toString();
+  }
+
+  public String where(String column, String... columns) {
+    StringBuilder builder = new StringBuilder(" WHERE ").append(quote(column)).append("=?");
+    
+    for (int i = 0; i < columns.length; i++) {
+      builder.append(", ").append(quote(columns[i])).append("=?");
+    }
+    
+    return builder.toString();
+  }
+  
+  public String asc(String column, String... columns) {
+    return orderBy(column, columns).append(" ASC").toString();
+  }
+
+  public String desc(String column, String... columns) {
+    return orderBy(column, columns).append(" DESC").toString();
+  }
+
+  private StringBuilder orderBy(String column, String... columns) {
+    StringBuilder builder = new StringBuilder(" ORDER BY ").append(column);
+    for (String columnName : columns) {
+      builder.append(", ").append(columnName);
+    }
+    
+    return builder;
+  }
+  
+  protected String quote(String identifier) {
+    return identifier;
   }
 
   private List<String> getColumnNames(Class<?> entityClass, AccessibleObject idAccessor, ColumnIgnorer columnIgnorer) {
