@@ -2,7 +2,7 @@ DbUtils-JPA brings JPA's easy-to-use mapping annotations to "DbUtils":http://com
 
 h2. Warning
 
-DbUtils-JPA currently relies on "my fork of DbUtils":https://github.com/mwanji/DbUtils to insert records. This will change when this feature is integrated into the released version of DbUtils. Please clone and <code>mvn install</code> that library.
+DbUtils-JPA currently relies on "my fork of DbUtils":https://github.com/mwanji/DbUtils to insert records. This will change when "this feature":https://issues.apache.org/jira/browse/DBUTILS-87 is integrated into the released version of DbUtils. Please clone and <code>mvn install</code> that library.
 
 h2. Main classes
 
@@ -33,7 +33,7 @@ The JpaQueryRunner always requires that you give it a QueryRunner. It can use a 
 
 h2. Using elements independently
 
-JpaBeanProcessor can be used apart from JpaQueryRunner, in conjunction with a RowProcessor and a ResultSetHandler, just like any other "BeanProcessor":http://commons.apache.org/dbutils/apidocs/org/apache/commons/dbutils/RowProcessor.html, to use JPA mappings in cases not handled by JpaQueryRunner.
+JpaBeanProcessor can be used apart from JpaQueryRunner, in conjunction with a "RowProcessor":http://commons.apache.org/dbutils/apidocs/org/apache/commons/dbutils/RowProcessor.html and a "ResultSetHandler":http://commons.apache.org/dbutils/apidocs/org/apache/commons/dbutils/ResultSetHandler.html, just like any other "BeanProcessor":http://commons.apache.org/dbutils/apidocs/org/apache/commons/dbutils/BeanProcessor.html, to use JPA mappings in cases not handled by JpaQueryRunner.
 
 <pre><code>ResultSetHandler<List<MyEntity>> handler = new BeanListHandler<MyEntity>(MyEntity.class, new BasicRowProcessor(new JpaBeanProcessor()));
 List<MyEntity> myEntities = queryRunner.query("SELECT * FROM MyEntity", handler);</code></pre>
