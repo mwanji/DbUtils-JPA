@@ -1,5 +1,9 @@
 DbUtils-JPA brings JPA's easy-to-use mapping annotations to "DbUtils":http://commons.apache.org/dbutils/index.html. It eliminates basic, repetitive SQL, while leaving all the power of DbUtils within easy reach.
 
+h2. Warning
+
+DbUtils-JPA currently relies on "my fork of DbUtils":https://github.com/mwanji/DbUtils to insert records. This will change when this feature is integrated into the released version of DbUtils. Please clone and <code>mvn install</code> that library.
+
 h2. Main classes
 
 * "JpaBeanProcessor":https://github.com/mwanji/DbUtils-JPA/blob/master/src/main/java/com/moandjiezana/dbutilsjpa/JpaBeanProcessor.java uses JPA annotations to convert a java.sql.ResultSet to an @Entity.
