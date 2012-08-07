@@ -35,7 +35,7 @@ public class JpaBeanProcessor extends BeanProcessor {
    * indicates there is no bean property that matches a column from a
    * <code>ResultSet</code>.
    */
-  protected static final int PROPERTY_NOT_FOUND = -1;
+  private static final int PROPERTY_NOT_FOUND = -1;
 
   /*
    * Set a bean's primitive properties to these defaults when SQL NULL is
