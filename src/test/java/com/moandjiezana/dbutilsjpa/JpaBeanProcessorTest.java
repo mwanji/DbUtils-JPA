@@ -7,6 +7,7 @@ import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 
+import org.junit.Before;
 import org.junit.Test;
 
 import com.moandjiezana.dbutilsjpa.testutils.CustomNamePropertyEntity;
@@ -16,17 +17,21 @@ import com.moandjiezana.dbutilsjpa.testutils.SimplePropertyEntity;
 
 public class JpaBeanProcessorTest {
 
-  private JpaBeanProcessor processor = new JpaBeanProcessor();
+  private final JpaBeanProcessor processor = new JpaBeanProcessor();
+  private final ResultSetMetaData metaData = mock(ResultSetMetaData.class);
+  private final ResultSet resultSet = mock(ResultSet.class);
+  
+  @Before
+  public void before() throws SQLException {
+    when(resultSet.getMetaData()).thenReturn(metaData);
+  }
   
   @Test
   public void should_convert_with_annotated_field() throws SQLException {
-    ResultSetMetaData metaData = mock(ResultSetMetaData.class);
     when(metaData.getColumnCount()).thenReturn(1);
     int idColumnIndex = 1;
-    setColumnName(metaData, "id", idColumnIndex);
+    setColumnName("id", idColumnIndex);
 
-    ResultSet resultSet = mock(ResultSet.class);
-    when(resultSet.getMetaData()).thenReturn(metaData);
     setLongValue(resultSet, idColumnIndex, Long.valueOf(1));
     
     SimpleEntity entity = processor.toBean(resultSet, SimpleEntity.class);
@@ -36,13 +41,10 @@ public class JpaBeanProcessorTest {
   
   @Test
   public void should_convert_with_annotated_property() throws SQLException {
-    ResultSetMetaData metaData = mock(ResultSetMetaData.class);
     int columnIndex = 1;
     when(metaData.getColumnCount()).thenReturn(columnIndex);
-    setColumnName(metaData, "id", columnIndex);
+    setColumnName("id", columnIndex);
 
-    ResultSet resultSet = mock(ResultSet.class);
-    when(resultSet.getMetaData()).thenReturn(metaData);
     setLongValue(resultSet, columnIndex, Long.valueOf(1));
     
     SimplePropertyEntity entity = processor.toBean(resultSet, SimplePropertyEntity.class);
@@ -52,13 +54,10 @@ public class JpaBeanProcessorTest {
   
   @Test
   public void should_convert_with_annotated_property_with_custom_names() throws SQLException {
-    ResultSetMetaData metaData = mock(ResultSetMetaData.class);
     int idColumnIndex = 1;
     when(metaData.getColumnCount()).thenReturn(1);
-    setColumnName(metaData, "customNameId", idColumnIndex);
+    setColumnName("customNameId", idColumnIndex);
 
-    ResultSet resultSet = mock(ResultSet.class);
-    when(resultSet.getMetaData()).thenReturn(metaData);
     setLongValue(resultSet, idColumnIndex, Long.valueOf(3));
     
     CustomNamePropertyEntity entity = processor.toBean(resultSet, CustomNamePropertyEntity.class);
@@ -68,13 +67,10 @@ public class JpaBeanProcessorTest {
   
   @Test
   public void should_handle_enum() throws SQLException {
-    ResultSetMetaData metaData = mock(ResultSetMetaData.class);
     when(metaData.getColumnCount()).thenReturn(2);
-    setColumnName(metaData, "id", 1);
-    setColumnName(metaData, "anEnum", 2);
+    setColumnName("id", 1);
+    setColumnName("anEnum", 2);
     
-    ResultSet resultSet = mock(ResultSet.class);
-    when(resultSet.getMetaData()).thenReturn(metaData);
     setLongValue(resultSet, 1, 1L);
     setStringValue(resultSet, 2, EnumEntity.SomeEnum.VALUE_2.name());
     
@@ -93,7 +89,7 @@ public class JpaBeanProcessorTest {
     when(resultSet.getString(columnIndex)).thenReturn(columnValue);
   }
 
-  private void setColumnName(ResultSetMetaData metaData, String columnName, int columnIndex) throws SQLException {
+  private void setColumnName(String columnName, int columnIndex) throws SQLException {
     when(metaData.getColumnName(columnIndex)).thenReturn(columnName);
   }
 }

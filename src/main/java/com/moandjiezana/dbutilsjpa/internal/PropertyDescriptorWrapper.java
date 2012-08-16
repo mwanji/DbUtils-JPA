@@ -7,6 +7,10 @@ import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Member;
 
+import javax.persistence.ManyToOne;
+
+import com.moandjiezana.dbutilsjpa.Entities;
+
 public class PropertyDescriptorWrapper extends PropertyDescriptor {
   
   public final Field field;
@@ -66,5 +70,15 @@ public class PropertyDescriptorWrapper extends PropertyDescriptor {
   
   public Member getMember() {
     return field != null ? field : propertyDescriptor.getReadMethod();
+  }
+  
+  public String getColumnName() {
+    String columnName = getReadMethod() != null || field != null ? Entities.getName(getAccessibleObject()) : getName();
+    
+    if (getAccessibleObject().isAnnotationPresent(ManyToOne.class)) {
+      columnName += "_id";
+    }
+    
+    return columnName;
   }
 }

@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.Map;
 
 import javax.persistence.Entity;
+import javax.persistence.ManyToOne;
 
 import org.apache.commons.dbutils.BeanProcessor;
 
@@ -100,12 +101,8 @@ public class JpaBeanProcessor extends BeanProcessor {
         columnName = rsmd.getColumnName(col);
       }
       for (int i = 0; i < props.length; i++) {
-        PropertyDescriptor propertyDescriptor = props[i];
-        String propertyName = propertyDescriptor.getName();
-
-        if (propertyDescriptor.getReadMethod() != null) {
-          propertyName = Entities.getName(propertyDescriptor.getReadMethod());
-        }
+        PropertyDescriptorWrapper propertyDescriptor = (PropertyDescriptorWrapper) props[i];
+        String propertyName = propertyDescriptor.getColumnName();
 
         if (columnName.equalsIgnoreCase(propertyName)) {
           columnToProperty[col] = i;
@@ -188,11 +185,36 @@ public class JpaBeanProcessor extends BeanProcessor {
 
       PropertyDescriptorWrapper prop = props[columnToProperty[i]];
       Class<?> propType = prop.getPropertyType();
-
-      Object value = this.processColumn(rs, i, propType);
-
-      if (propType != null && value == null && propType.isPrimitive()) {
-        value = primitiveDefaults.get(propType);
+      Object value = null;
+      if (Entities.isRelation(prop.getAccessibleObject())) {
+        String tableName = Entities.getName(prop.getPropertyType());
+        ResultSetMetaData metaData = rs.getMetaData();
+        
+        if (prop.getAccessibleObject().isAnnotationPresent(ManyToOne.class)) {
+          Class<?> joinType = prop.getPropertyType();
+          value = newInstance(joinType);
+          PropertyDescriptorWrapper[] joinPropertyDescriptors = propertyDescriptors(joinType);
+          for (int j = 1; j <= metaData.getColumnCount(); j++) {
+            if (!tableName.equalsIgnoreCase(metaData.getTableName(j))) {
+              continue;
+            }
+            
+            String joinColumnName = metaData.getColumnLabel(j);
+            
+            for (PropertyDescriptorWrapper joinPropertyDescriptor : joinPropertyDescriptors) {
+              if (Entities.getName(joinPropertyDescriptor.getAccessibleObject()).equalsIgnoreCase(joinColumnName)) {
+                callSetter(value, joinPropertyDescriptor, processColumn(rs, j, joinPropertyDescriptor.getPropertyType()));
+                break;
+              }
+            }
+          }
+        }
+      } else {
+        value = this.processColumn(rs, i, propType);
+        
+        if (propType != null && value == null && propType.isPrimitive()) {
+          value = primitiveDefaults.get(propType);
+        }
       }
 
       this.callSetter(bean, prop, value);
