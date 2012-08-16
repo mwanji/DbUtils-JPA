@@ -38,6 +38,9 @@ public class Entities {
     throw new IllegalArgumentException(type.getName() + " does not have a field or property annotated with @Id");
   }
   
+  /**
+   * @return Name of corresponding table. Uses Table annotation if present, defaults to class's simple name.
+   */
   public static String getName(Class<?> entityClass) {
     if (entityClass.isAnnotationPresent(Table.class)) {
       String name = entityClass.getAnnotation(Table.class).name();
@@ -49,6 +52,9 @@ public class Entities {
     return entityClass.getSimpleName();
   }
   
+  /**
+   * @return Name of corresponding field. Uses Column annotation if present, defaults to field if accessibleObject is a field or JavaBean-style property name if accessibleObject is a method.
+   */
   public static String getName(AccessibleObject accessibleObject) {
     if (accessibleObject.isAnnotationPresent(Column.class)) {
       String name = accessibleObject.getAnnotation(Column.class).name();
