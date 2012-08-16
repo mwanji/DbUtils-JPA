@@ -31,10 +31,10 @@ import com.moandjiezana.dbutilsjpa.internal.PropertyDescriptorWrapper;
 */
 public class JpaQueryRunner {
 
-  private static final ScalarHandler<Long> DEFAULT_GENERATED_KEYS_HANDLER = new ScalarHandler<Long>();
-  private static final SqlWriter DEFAULT_SQL_WRITER = new SqlWriter();
-  private static final BasicRowProcessor DEFAULT_ROW_PROCESSOR = new BasicRowProcessor(new JpaBeanProcessor());
-  private static final NewEntityTester DEFAULT_ENTITY_TESTER = new NewEntityTester() {
+  public static final ScalarHandler<Long> DEFAULT_GENERATED_KEYS_HANDLER = new ScalarHandler<Long>();
+  public static final SqlWriter DEFAULT_SQL_WRITER = new SqlWriter();
+  public static final BasicRowProcessor DEFAULT_ROW_PROCESSOR = new BasicRowProcessor(new JpaBeanProcessor());
+  public static final NewEntityTester DEFAULT_ENTITY_TESTER = new NewEntityTester() {
     @Override
     public boolean isNew(Object entity) {
       AccessibleObject idAccessor = Entities.getIdAccessor(entity.getClass());
@@ -60,6 +60,42 @@ public class JpaQueryRunner {
   private final NewEntityTester entityTester;
   private final RowProcessor rowProcessor;
   private final ResultSetHandler<?> generatedKeysHandler;
+  
+  public static class Builder {
+    
+    private SqlWriter sqlWriter;
+    private NewEntityTester entityTester;
+    private ResultSetHandler<?> generatedKeysHandler;
+    private RowProcessor rowProcessor;
+
+    public JpaQueryRunner build(QueryRunner queryRunner) {
+      return new JpaQueryRunner(queryRunner, choose(this.sqlWriter, DEFAULT_SQL_WRITER), choose(this.entityTester, DEFAULT_ENTITY_TESTER), choose(this.rowProcessor, DEFAULT_ROW_PROCESSOR), choose(this.generatedKeysHandler, DEFAULT_GENERATED_KEYS_HANDLER));
+    }
+    
+    public Builder sqlWriter(SqlWriter sqlWriter) {
+      this.sqlWriter = sqlWriter;
+      return this;
+    }
+    
+    public Builder entityTester(NewEntityTester entityTester) {
+      this.entityTester = entityTester;
+      return this;
+    }
+    
+    public Builder generatedKeysHandler(ResultSetHandler<?> generatedKeysHandler) {
+      this.generatedKeysHandler = generatedKeysHandler;
+      return this;
+    }
+    
+    public Builder rowProcessor(RowProcessor rowProcessor) {
+      this.rowProcessor = rowProcessor;
+      return this;
+    }
+    
+    private <T> T choose(T value, T fallback) {
+      return value != null ? value : fallback;
+    }
+  }
 
   public JpaQueryRunner(QueryRunner queryRunner) {
     this(queryRunner, DEFAULT_SQL_WRITER, DEFAULT_ENTITY_TESTER, DEFAULT_ROW_PROCESSOR, DEFAULT_GENERATED_KEYS_HANDLER);
