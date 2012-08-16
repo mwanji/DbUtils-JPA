@@ -24,13 +24,13 @@ public class Entities {
 
   public static AccessibleObject getIdAccessor(Class<?> type) {
     for (Method method : type.getMethods()) {
-      if (method.isAnnotationPresent(Id.class)) {
+      if (isIdAccessor(method)) {
         return method;
       }
     }
 
     for (Field field : type.getDeclaredFields()) {
-      if (field.isAnnotationPresent(Id.class)) {
+      if (isIdAccessor(field)) {
         return field;
       }
     }
