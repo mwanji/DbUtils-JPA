@@ -21,7 +21,6 @@ import java.util.List;
 import java.util.Map;
 
 import javax.persistence.Entity;
-import javax.persistence.ManyToOne;
 
 import org.apache.commons.dbutils.BeanProcessor;
 
@@ -186,13 +185,13 @@ public class JpaBeanProcessor extends BeanProcessor {
       PropertyDescriptorWrapper prop = props[columnToProperty[i]];
       Class<?> propType = prop.getPropertyType();
       Object value = null;
-      if (Entities.isRelation(prop.getAccessibleObject())) {
+      AccessibleObject accessibleObject = prop.getAccessibleObject();
+      if (Entities.isRelation(accessibleObject)) {
         String tableName = Entities.getName(prop.getPropertyType());
         ResultSetMetaData metaData = rs.getMetaData();
         
-        if (prop.getAccessibleObject().isAnnotationPresent(ManyToOne.class)) {
+        if (Entities.isToOneRelation(accessibleObject)) {
           Class<?> joinType = prop.getPropertyType();
-          value = newInstance(joinType);
           PropertyDescriptorWrapper[] joinPropertyDescriptors = propertyDescriptors(joinType);
           for (int j = 1; j <= metaData.getColumnCount(); j++) {
             if (!tableName.equalsIgnoreCase(metaData.getTableName(j))) {
@@ -203,6 +202,10 @@ public class JpaBeanProcessor extends BeanProcessor {
             
             for (PropertyDescriptorWrapper joinPropertyDescriptor : joinPropertyDescriptors) {
               if (Entities.getName(joinPropertyDescriptor.getAccessibleObject()).equalsIgnoreCase(joinColumnName)) {
+                if (value == null) {
+                  value = newInstance(joinType);
+                }
+                
                 callSetter(value, joinPropertyDescriptor, processColumn(rs, j, joinPropertyDescriptor.getPropertyType()));
                 break;
               }

@@ -7,7 +7,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Member;
 
-import javax.persistence.ManyToOne;
+import javax.persistence.JoinColumn;
 
 import com.moandjiezana.dbutilsjpa.Entities;
 
@@ -73,10 +73,14 @@ public class PropertyDescriptorWrapper extends PropertyDescriptor {
   }
   
   public String getColumnName() {
-    String columnName = getReadMethod() != null || field != null ? Entities.getName(getAccessibleObject()) : getName();
+    AccessibleObject accessibleObject = getAccessibleObject();
+    String columnName = getReadMethod() != null || field != null ? Entities.getName(accessibleObject) : getName();
     
-    if (getAccessibleObject().isAnnotationPresent(ManyToOne.class)) {
-      columnName += "_id";
+    if (Entities.isToOneRelation(accessibleObject)) {
+      if (accessibleObject.isAnnotationPresent(JoinColumn.class)) {
+        return accessibleObject.getAnnotation(JoinColumn.class).name();
+      }
+      return columnName + "_id";
     }
     
     return columnName;
