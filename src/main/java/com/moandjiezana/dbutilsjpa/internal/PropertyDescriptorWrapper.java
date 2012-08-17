@@ -1,19 +1,69 @@
 package com.moandjiezana.dbutilsjpa.internal;
 
+import java.beans.BeanInfo;
 import java.beans.IntrospectionException;
+import java.beans.Introspector;
 import java.beans.PropertyDescriptor;
 import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Member;
+import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.List;
 
 import javax.persistence.JoinColumn;
 
 import com.moandjiezana.dbutilsjpa.Entities;
 
 public class PropertyDescriptorWrapper extends PropertyDescriptor {
+
+  private static final PropertyDescriptorWrapper[] EMPTY_PROPERTY_DESCRIPTOR_ARRAY = new PropertyDescriptorWrapper[0];
+
+  public static PropertyDescriptorWrapper[] getPropertyDescriptorsFromMethods(Class<?> c) {
+    BeanInfo beanInfo = null;
+    try {
+      beanInfo = Introspector.getBeanInfo(c);
+      
+      List<PropertyDescriptorWrapper> propertyDescriptors = new ArrayList<PropertyDescriptorWrapper>();
+      
+      for (PropertyDescriptor propertyDescriptor : beanInfo.getPropertyDescriptors()) {
+        Method readMethod = propertyDescriptor.getReadMethod();
+        if (Entities.isTransient(readMethod) || Entities.isStatic(readMethod)) {
+          continue;
+        }
+        
+        propertyDescriptors.add(new PropertyDescriptorWrapper(propertyDescriptor));
+      }
+      
+      return propertyDescriptors.toArray(EMPTY_PROPERTY_DESCRIPTOR_ARRAY);
+    } catch (IntrospectionException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  public static PropertyDescriptorWrapper[] getPropertyDescriptorsFromFields(Class<?> c) {
+    List<PropertyDescriptorWrapper> propertyDescriptors = new ArrayList<PropertyDescriptorWrapper>();
+
+    for (Field field : c.getDeclaredFields()) {
+      if (Entities.isTransient(field) || Entities.isStatic(field)) {
+        continue;
+      }
+
+      String propertyName = Entities.getName(field);
+
+      try {
+        propertyDescriptors.add(new PropertyDescriptorWrapper(propertyName, field));
+      } catch (IntrospectionException e) {
+        throw new RuntimeException(e);
+      }
+    }
+
+    return propertyDescriptors.toArray(EMPTY_PROPERTY_DESCRIPTOR_ARRAY);
+  }
+
   
-  public final Field field;
+  private final Field field;
   private final PropertyDescriptor propertyDescriptor;
   
   public PropertyDescriptorWrapper(String propertyName, Field field) throws IntrospectionException {

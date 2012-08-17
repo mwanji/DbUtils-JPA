@@ -1,14 +1,10 @@
 package com.moandjiezana.dbutilsjpa;
 
-import java.beans.IntrospectionException;
-import java.beans.Introspector;
-import java.beans.PropertyDescriptor;
 import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Member;
 import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
@@ -146,29 +142,20 @@ public class JpaQueryRunner {
       boolean isNew = entityTester.isNew(entity);
 
       AccessibleObject idAccessor = Entities.getIdAccessor(entityClass);
-      List<PropertyDescriptorWrapper> pD = new ArrayList<PropertyDescriptorWrapper>();
+      List<PropertyDescriptorWrapper> relevantPropertyDescriptors = new ArrayList<PropertyDescriptorWrapper>();
       PropertyDescriptorWrapper idPropertyDescriptor = null;
       PropertyDescriptorWrapper[] propertyDescriptorWrappers = null;
       if (idAccessor instanceof Method) {
-        PropertyDescriptor[] propertyDescriptors = Introspector.getBeanInfo(entityClass).getPropertyDescriptors();
-        propertyDescriptorWrappers = new PropertyDescriptorWrapper[propertyDescriptors.length];
-        for (int i = 0; i < propertyDescriptorWrappers.length; i++) {
-          propertyDescriptorWrappers[i] = new PropertyDescriptorWrapper(propertyDescriptors[i]);
-        }
+        propertyDescriptorWrappers = PropertyDescriptorWrapper.getPropertyDescriptorsFromMethods(entityClass);
       } else {
-        propertyDescriptorWrappers = new PropertyDescriptorWrapper[entityClass.getDeclaredFields().length];
-        for (int i = 0; i < propertyDescriptorWrappers.length; i++) {
-          Field field = entityClass.getDeclaredFields()[i];
-          propertyDescriptorWrappers[i] = new PropertyDescriptorWrapper(Entities.getName(entityClass.getDeclaredFields()[i]), field);
-        }
+        propertyDescriptorWrappers = PropertyDescriptorWrapper.getPropertyDescriptorsFromFields(entityClass);
       }
       
       for (PropertyDescriptorWrapper propertyDescriptorWrapper : propertyDescriptorWrappers) {
         AccessibleObject accessibleObject = propertyDescriptorWrapper.getAccessibleObject();
         Member member = propertyDescriptorWrapper.getMember();
         
-        if (!Entities.isMapped(member.getDeclaringClass()) || Entities.isTransient(accessibleObject)
-            || Entities.isRelation(accessibleObject) || Modifier.isStatic(member.getModifiers())) {
+        if (!Entities.isMapped(member.getDeclaringClass()) || Entities.isRelation(accessibleObject)) {
           continue;
         }
 
@@ -177,26 +164,21 @@ public class JpaQueryRunner {
           continue;
         }
         
-        if (isNew && accessibleObject.isAnnotationPresent(Column.class) && !accessibleObject.getAnnotation(Column.class).insertable()) {
-          continue;
-        } else if (!isNew && accessibleObject.isAnnotationPresent(Column.class) && !accessibleObject.getAnnotation(Column.class).updatable()) {
+        if (isNotSettable(isNew, accessibleObject)) {
           continue;
         }
         
-        pD.add(propertyDescriptorWrapper);
+        relevantPropertyDescriptors.add(propertyDescriptorWrapper);
       }
+      
       if (!isNew) {
-        for (PropertyDescriptorWrapper propertyDescriptorWrapper : propertyDescriptorWrappers) {
-          if (Entities.isIdAccessor(propertyDescriptorWrapper.getAccessibleObject())) {
-            pD.add(propertyDescriptorWrapper);
-          }
-        }
+        relevantPropertyDescriptors.add(idPropertyDescriptor);
       }
 
-      Object[] args = new Object[pD.size()];
+      Object[] args = new Object[relevantPropertyDescriptors.size()];
       for (int i = 0; i < args.length; i++) {
-        PropertyDescriptorWrapper propertyDescriptor = pD.get(i);
-          args[i] = propertyDescriptor.get(entity);
+        PropertyDescriptorWrapper propertyDescriptor = relevantPropertyDescriptors.get(i);
+        args[i] = propertyDescriptor.get(entity);
         if (args[i] != null && Enum.class.isAssignableFrom(args[i].getClass())) {
           args[i] = args[i].toString();
         }
@@ -204,17 +186,13 @@ public class JpaQueryRunner {
 
       if (isNew) {
         Object newId = queryRunner.insert(sqlWriter.insert(entityClass), generatedKeysHandler, args);
-        if (idPropertyDescriptor != null) {
-          idPropertyDescriptor.set(entity, newId);
-        }
+        idPropertyDescriptor.set(entity, newId);
         
         return 1;
       } else {
         return queryRunner.update(sqlWriter.updateById(entityClass), args);
       }
     } catch (SQLException e) {
-      throw new RuntimeException(e);
-    } catch (IntrospectionException e) {
       throw new RuntimeException(e);
     }
   }
@@ -225,5 +203,9 @@ public class JpaQueryRunner {
     } catch (SQLException e) {
       throw new RuntimeException(e);
     }
+  }
+  
+  private boolean isNotSettable(boolean isNew, AccessibleObject accessibleObject) {
+    return (isNew && accessibleObject.isAnnotationPresent(Column.class) && !accessibleObject.getAnnotation(Column.class).insertable()) || (!isNew && accessibleObject.isAnnotationPresent(Column.class) && !accessibleObject.getAnnotation(Column.class).updatable());
   }
 }
