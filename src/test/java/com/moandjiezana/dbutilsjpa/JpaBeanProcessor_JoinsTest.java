@@ -29,7 +29,8 @@ public class JpaBeanProcessor_JoinsTest {
     queryRunner.update(conn, "CREATE TABLE SimpleEntity(id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR)");
     queryRunner.update(conn, "CREATE TABLE EnumEntity(id INT AUTO_INCREMENT PRIMARY KEY, anEnum VARCHAR)");
     queryRunner.update(conn, "CREATE TABLE MultiplePropertyEntity(id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR, age INT, birthDate DATE)");
-    queryRunner.update(conn, "CREATE TABLE EntityWithJoin(id INT AUTO_INCREMENT PRIMARY KEY, simple_id INT, custom_enum_fk INT, oneToOne_id INT)");
+    queryRunner.update(conn, "CREATE TABLE NonUpdatableEntity(id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR, notUpdated VARCHAR, notInserted VARCHAR)");
+    queryRunner.update(conn, "CREATE TABLE EntityWithJoin(id INT AUTO_INCREMENT PRIMARY KEY, simple_id INT, custom_enum_fk INT, oneToOne_id INT, customSuffix_csfk INT)");
   }
   
   @After
@@ -68,6 +69,17 @@ public class JpaBeanProcessor_JoinsTest {
     
     assertEquals(Long.valueOf(enumEntityId), entityWithJoin.enumEntity.id);
     assertEquals(EnumEntity.SomeEnum.VALUE_2, entityWithJoin.enumEntity.anEnum);
+  }
+  
+  @Test
+  public void should_join_many_to_one_with_custom_fk_suffix() throws SQLException {
+    Integer customSuffixId = queryRunner.insert(conn, "INSERT INTO NonUpdatableEntity(name) VALUES(?)", new ScalarHandler<Integer>(), "my name");
+    Integer entityWithJoinId = queryRunner.insert(conn, "INSERT INTO EntityWithJoin(customSuffix_csfk) VALUES(?)", idHandler, customSuffixId);
+    BeanHandler<EntityWithJoin> customSuffixHandler = new BeanHandler<EntityWithJoin>(EntityWithJoin.class, new BasicRowProcessor(new JpaBeanProcessor("_csfk")));
+    
+    EntityWithJoin entityWithJoin = queryRunner.query(conn, "SELECT EntityWithJoin.*, NonUpdatableEntity.* FROM EntityWithJoin, NonUpdatableEntity WHERE EntityWithJoin.customSuffix_csfk = NonUpdatableEntity.id AND EntityWithJoin.id = ?", customSuffixHandler, entityWithJoinId);
+    
+    assertEquals(Long.valueOf(customSuffixId), entityWithJoin.customSuffix.getId());
   }
 
   @Test

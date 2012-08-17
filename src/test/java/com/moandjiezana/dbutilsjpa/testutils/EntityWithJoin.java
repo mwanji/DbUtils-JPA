@@ -20,4 +20,7 @@ public class EntityWithJoin {
   
   @OneToOne
   public MultiplePropertyEntity oneToOne;
+  
+  @ManyToOne
+  public NonUpdatableEntity customSuffix;
 }

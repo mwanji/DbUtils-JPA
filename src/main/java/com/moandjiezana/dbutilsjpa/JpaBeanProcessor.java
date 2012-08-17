@@ -44,6 +44,8 @@ public class JpaBeanProcessor extends BeanProcessor {
    */
   private static final Map<Class<?>, Object> primitiveDefaults = new HashMap<Class<?>, Object>();
 
+  private final String foreignKeySuffix;
+
   static {
     primitiveDefaults.put(Integer.TYPE, Integer.valueOf(0));
     primitiveDefaults.put(Short.TYPE, Short.valueOf((short) 0));
@@ -53,6 +55,20 @@ public class JpaBeanProcessor extends BeanProcessor {
     primitiveDefaults.put(Long.TYPE, Long.valueOf(0L));
     primitiveDefaults.put(Boolean.TYPE, Boolean.FALSE);
     primitiveDefaults.put(Character.TYPE, Character.valueOf((char) 0));
+  }
+
+  /**
+   * Uses _id as foreignKeySuffix
+   */
+  public JpaBeanProcessor() {
+    this("_id");
+  }
+  
+  /**
+   * @param foreignKeySuffix appended to the names of join columns when no name is explicitly specified in an annotation 
+   */
+  public JpaBeanProcessor(String foreignKeySuffix) {
+    this.foreignKeySuffix = foreignKeySuffix;
   }
 
   @Override
@@ -101,7 +117,7 @@ public class JpaBeanProcessor extends BeanProcessor {
       }
       for (int i = 0; i < props.length; i++) {
         PropertyDescriptorWrapper propertyDescriptor = (PropertyDescriptorWrapper) props[i];
-        String propertyName = propertyDescriptor.getColumnName();
+        String propertyName = propertyDescriptor.getColumnName(foreignKeySuffix);
 
         if (columnName.equalsIgnoreCase(propertyName)) {
           columnToProperty[col] = i;

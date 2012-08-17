@@ -72,7 +72,7 @@ public class PropertyDescriptorWrapper extends PropertyDescriptor {
     return field != null ? field : propertyDescriptor.getReadMethod();
   }
   
-  public String getColumnName() {
+  public String getColumnName(String defaultForeignKeySuffix) {
     AccessibleObject accessibleObject = getAccessibleObject();
     String columnName = getReadMethod() != null || field != null ? Entities.getName(accessibleObject) : getName();
     
@@ -80,7 +80,7 @@ public class PropertyDescriptorWrapper extends PropertyDescriptor {
       if (accessibleObject.isAnnotationPresent(JoinColumn.class)) {
         return accessibleObject.getAnnotation(JoinColumn.class).name();
       }
-      return columnName + "_id";
+      return columnName + defaultForeignKeySuffix;
     }
     
     return columnName;
