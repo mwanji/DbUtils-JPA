@@ -89,7 +89,11 @@ public class Entities {
   }
   
   public static boolean isRelation(AccessibleObject accessibleObject) {
-    return accessibleObject.isAnnotationPresent(OneToMany.class) || accessibleObject.isAnnotationPresent(ManyToOne.class) || accessibleObject.isAnnotationPresent(OneToOne.class);
+    return accessibleObject.isAnnotationPresent(OneToMany.class) || isToOneRelation(accessibleObject);
+  }
+  
+  public static boolean isToOneRelation(AccessibleObject accessibleObject) {
+    return accessibleObject.isAnnotationPresent(ManyToOne.class) || accessibleObject.isAnnotationPresent(OneToOne.class);
   }
   
   public static boolean isIdAccessor(AnnotatedElement annotatedElement) {
