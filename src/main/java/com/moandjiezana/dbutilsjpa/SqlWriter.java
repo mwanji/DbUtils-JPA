@@ -15,16 +15,20 @@ import java.util.Map;
 
 import javax.persistence.Column;
 
+import org.sql.generation.api.grammar.builders.booleans.BooleanBuilder;
 import org.sql.generation.api.grammar.builders.modification.DeleteBySearchBuilder;
 import org.sql.generation.api.grammar.builders.modification.UpdateBySearchBuilder;
+import org.sql.generation.api.grammar.builders.query.OrderByBuilder;
 import org.sql.generation.api.grammar.builders.query.SimpleQueryBuilder;
 import org.sql.generation.api.grammar.factories.BooleanFactory;
 import org.sql.generation.api.grammar.factories.ColumnsFactory;
 import org.sql.generation.api.grammar.factories.LiteralFactory;
 import org.sql.generation.api.grammar.factories.ModificationFactory;
+import org.sql.generation.api.grammar.factories.QueryFactory;
 import org.sql.generation.api.grammar.factories.TableReferenceFactory;
 import org.sql.generation.api.grammar.literals.DirectLiteral;
 import org.sql.generation.api.grammar.modification.SetClause;
+import org.sql.generation.api.grammar.query.Ordering;
 import org.sql.generation.api.vendor.MySQLVendor;
 import org.sql.generation.api.vendor.SQLVendor;
 import org.sql.generation.api.vendor.SQLVendorProvider;
@@ -114,36 +118,34 @@ public class SqlWriter {
   }
 
   public String where(String column, String... columns) {
-    StringBuilder builder = new StringBuilder(" WHERE ").append(quote(column)).append("=?");
-    
-    for (int i = 0; i < columns.length; i++) {
-      builder.append(", ").append(quote(columns[i])).append("=?");
+    BooleanBuilder booleanBuilder = bool.booleanBuilder(bool.eq(this.columns.colName(column), literals.param()));
+    for (String otherColumn : columns) {
+      booleanBuilder.and(bool.eq(this.columns.colName(otherColumn), literals.param()));
     }
-    
-    return builder.toString();
+
+    return " WHERE " + booleanBuilder.createExpression().toString();
   }
   
   public String asc(String column, String... columns) {
-    return orderBy(column, columns).append(" ASC").toString();
+    return orderBy(column, Ordering.ASCENDING, columns);
   }
 
   public String desc(String column, String... columns) {
-    return orderBy(column, columns).append(" DESC").toString();
+    return orderBy(column, Ordering.DESCENDING, columns);
   }
 
-  private StringBuilder orderBy(String column, String... columns) {
-    StringBuilder builder = new StringBuilder(" ORDER BY ").append(column);
+  private String orderBy(String column, Ordering ordering, String... columns) {
+    QueryFactory queries = sqlVendor.getQueryFactory();
+    OrderByBuilder builder = queries.orderByBuilder();
+    builder.addSortSpecs(queries.sortSpec(this.columns.colName(column), ordering));
+    
     for (String columnName : columns) {
-      builder.append(", ").append(columnName);
+      builder.addSortSpecs(queries.sortSpec(this.columns.colName(columnName), ordering));
     }
     
-    return builder;
+    return builder.createExpression().toString();
   }
   
-  protected String quote(String identifier) {
-    return identifier;
-  }
-
   private String[] getColumnNames(Class<?> entityClass, AccessibleObject idAccessor, ColumnIgnorer columnIgnorer) {
     List<String> columnNames = new ArrayList<String>();
     try {
