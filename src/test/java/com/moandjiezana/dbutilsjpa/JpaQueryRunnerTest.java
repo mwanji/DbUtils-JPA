@@ -1,7 +1,12 @@
 package com.moandjiezana.dbutilsjpa;
 
 import static org.fest.reflect.core.Reflection.field;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.stub;
+import static org.mockito.Mockito.verify;
+
+import com.moandjiezana.dbutilsjpa.testutils.CustomNamePropertyEntity;
+import com.moandjiezana.dbutilsjpa.testutils.NonUpdatableEntity;
+import com.moandjiezana.dbutilsjpa.testutils.SimpleEntity;
 
 import java.sql.SQLException;
 import java.util.Date;
@@ -14,10 +19,6 @@ import org.fest.reflect.field.Invoker;
 import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.Mockito;
-
-import com.moandjiezana.dbutilsjpa.testutils.CustomNamePropertyEntity;
-import com.moandjiezana.dbutilsjpa.testutils.NonUpdatableEntity;
-import com.moandjiezana.dbutilsjpa.testutils.SimpleEntity;
 
 public class JpaQueryRunnerTest {
 
@@ -33,7 +34,7 @@ public class JpaQueryRunnerTest {
     
     runner.save(entity);
     
-    verify(queryRunner).update("UPDATE SimpleEntity SET name=? WHERE id=?", name.get(), entity.getId());
+    verify(queryRunner).update("UPDATE SimpleEntity\nSET name = ?\nWHERE id = ?", name.get(), entity.getId());
   }
   
   @Test
@@ -44,7 +45,7 @@ public class JpaQueryRunnerTest {
     
     runner.save(entity);
     
-    verify(queryRunner).update("UPDATE myTableName SET customDateColumn=? WHERE customNameId=?", entity.getDate(), entity.getId());
+    verify(queryRunner).update("UPDATE myTableName\nSET customDateColumn = ?\nWHERE customNameId = ?", entity.getDate(), entity.getId());
   }
   
   @Test
@@ -55,7 +56,7 @@ public class JpaQueryRunnerTest {
     
     runner.save(entity);
     
-    verify(queryRunner).update("UPDATE NonUpdatableEntity SET name=?, notInserted=? WHERE id=?", entity.getName(), entity.getNotInserted(), entity.getId());
+    verify(queryRunner).update("UPDATE NonUpdatableEntity\nSET name = ?, notInserted = ?\nWHERE id = ?", entity.getName(), entity.getNotInserted(), entity.getId());
   }
   
   @Test
@@ -66,7 +67,7 @@ public class JpaQueryRunnerTest {
     
     runner.save(entity);
     
-    verify(queryRunner).insert(Mockito.eq("INSERT INTO NonUpdatableEntity(name,notUpdated) VALUES(?,?)"), Mockito.any(ScalarHandler.class), Mockito.eq(entity.getName()), Mockito.eq(entity.getNotUpdated()));
+    verify(queryRunner).insert(Mockito.eq("INSERT INTO NonUpdatableEntity (name, notUpdated)\nVALUES(?, ?)"), Mockito.any(ScalarHandler.class), Mockito.eq(entity.getName()), Mockito.eq(entity.getNotUpdated()));
   }
   
   @Test
@@ -75,7 +76,7 @@ public class JpaQueryRunnerTest {
     SimpleEntity entity = new SimpleEntity();
     Invoker<String> name = field("name").ofType(String.class).in(entity);
     name.set("a name");
-    stub(queryRunner.insert(Mockito.eq("INSERT INTO SimpleEntity(name) VALUES(?)"), Mockito.any(ResultSetHandler.class), Mockito.eq(name.get()))).toReturn(5L);
+    stub(queryRunner.insert(Mockito.eq("INSERT INTO SimpleEntity (name)\nVALUES(?)"), Mockito.any(ResultSetHandler.class), Mockito.eq(name.get()))).toReturn(5L);
     
     runner.save(entity);
     
@@ -88,6 +89,6 @@ public class JpaQueryRunnerTest {
     
     runner.save(entity);
     
-    verify(queryRunner).insert(Mockito.eq("INSERT INTO NonUpdatableEntity(name,notUpdated) VALUES(?,?)"), Mockito.any(ResultSetHandler.class), Mockito.eq(entity.getName()), Mockito.eq(entity.getNotUpdated()));
+    verify(queryRunner).insert(Mockito.eq("INSERT INTO NonUpdatableEntity (name, notUpdated)\nVALUES(?, ?)"), Mockito.any(ResultSetHandler.class), Mockito.eq(entity.getName()), Mockito.eq(entity.getNotUpdated()));
   }
 }

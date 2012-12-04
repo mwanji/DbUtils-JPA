@@ -3,76 +3,111 @@ package com.moandjiezana.dbutilsjpa;
 import java.beans.IntrospectionException;
 import java.beans.Introspector;
 import java.beans.PropertyDescriptor;
+import java.io.IOException;
 import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.Field;
 import java.lang.reflect.Member;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
 import javax.persistence.Column;
 
-public class SqlWriter {
+import org.sql.generation.api.grammar.builders.modification.DeleteBySearchBuilder;
+import org.sql.generation.api.grammar.builders.modification.UpdateBySearchBuilder;
+import org.sql.generation.api.grammar.builders.query.SimpleQueryBuilder;
+import org.sql.generation.api.grammar.factories.BooleanFactory;
+import org.sql.generation.api.grammar.factories.ColumnsFactory;
+import org.sql.generation.api.grammar.factories.LiteralFactory;
+import org.sql.generation.api.grammar.factories.ModificationFactory;
+import org.sql.generation.api.grammar.factories.TableReferenceFactory;
+import org.sql.generation.api.grammar.literals.DirectLiteral;
+import org.sql.generation.api.grammar.modification.SetClause;
+import org.sql.generation.api.vendor.MySQLVendor;
+import org.sql.generation.api.vendor.SQLVendor;
+import org.sql.generation.api.vendor.SQLVendorProvider;
 
-  public String selectById(Class<?> entityClass, Object primaryKey) {
+public class SqlWriter {
+  
+  private final SQLVendor sqlVendor;
+  private final ColumnsFactory columns;
+  private final LiteralFactory literals;
+  private final TableReferenceFactory tables;
+  private final BooleanFactory bool;
+  private ModificationFactory dml;
+  
+  public SqlWriter() {
+    this(MySQLVendor.class);
+  }
+  
+  public SqlWriter(Class<? extends SQLVendor> vendorClass) {
+    try {
+      sqlVendor = SQLVendorProvider.createVendor(vendorClass);
+      columns = sqlVendor.getColumnsFactory();
+      literals = sqlVendor.getLiteralFactory();
+      tables = sqlVendor.getTableReferenceFactory();
+      bool = sqlVendor.getBooleanFactory();
+      dml = sqlVendor.getModificationFactory();
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  public String selectById(Class<?> entityClass) {
     AccessibleObject idAccessor = Entities.getIdAccessor(entityClass);
     if (!idAccessor.isAccessible()) {
       idAccessor.setAccessible(true);
     }
     String idColumnName = Entities.getName(idAccessor);
     
-    return select(entityClass) + where(idColumnName);
+    SimpleQueryBuilder sql = sqlVendor.getQueryFactory().simpleQueryBuilder();
+    return sql.selectAllColumns()
+        .from(tables.tableName(Entities.getName(entityClass)))
+        .where(bool.eq(columns.colName(idColumnName), literals.param()))
+        .createExpression().toString();
   }
 
   public String select(Class<?> entityClass) {
-    return "SELECT * FROM " + quote(Entities.getName(entityClass));
+    return sqlVendor.getQueryFactory().simpleQueryBuilder().selectAllColumns().from(tables.tableName(Entities.getName(entityClass))).createExpression().toString();
   }
 
   public String insert(Class<?> entityClass) {
-    List<String> columnNames = getColumnNames(entityClass, Entities.getIdAccessor(entityClass), NOT_INSERTABLE);
-    StringBuilder sb = new StringBuilder("INSERT INTO ").append(quote(Entities.getName(entityClass))).append("(");
-    
-    for (int i = 0; i < columnNames.size(); i++) {
-      sb.append(quote(columnNames.get(i)));
-      if (i + 1 < columnNames.size()) {
-        sb.append(",");
-      }
+    String[] columnNames = getColumnNames(entityClass, Entities.getIdAccessor(entityClass), NOT_INSERTABLE);
+    DirectLiteral[] values = new DirectLiteral[columnNames.length];
+    for (int i = 0; i < columnNames.length; i++) {
+      values[i] = literals.param();
     }
-    sb.append(") VALUES(");
     
-    for (int i = 0; i < columnNames.size(); i++) {
-      sb.append("?");
-      if (i + 1 < columnNames.size()) {
-        sb.append(",");
-      }
-    }
-    sb.append(")");
-    return sb.toString();
+    return dml.insert().setTableName(tables.tableName(Entities.getName(entityClass)))
+      .setColumnSource(dml.columnSourceByValues()
+        .addColumnNames(columnNames)
+        .addValues(values).createExpression())
+      .createExpression().toString();
   }
 
   public String deleteById(Class<?> entityClass) {
-    return "DELETE FROM " + quote(Entities.getName(entityClass)) + " WHERE " + quote(Entities.getName(Entities.getIdAccessor(entityClass))) + "=?";
+    DeleteBySearchBuilder builder = dml.deleteBySearch().setTargetTable(dml.createTargetTable(tables.tableName(Entities.getName(entityClass))));
+    builder.getWhere().and(bool.eq(columns.colName(Entities.getName(Entities.getIdAccessor(entityClass))), literals.param()));
+    
+    return builder.createExpression().toString();
   }
 
   public String updateById(Class<?> entityClass, String... columns) {
-    StringBuilder sb = new StringBuilder("UPDATE ").append(quote(Entities.getName(entityClass))).append(" SET");
-    
     AccessibleObject idAccessor = Entities.getIdAccessor(entityClass);
-    List<String> columnNames = columns.length == 0 ? getColumnNames(entityClass, idAccessor, NOT_UPDATABLE) : Arrays.asList(columns);
-    
-    for (int i = 0; i < columnNames.size(); i++) {
-      sb.append(" ").append(quote(columnNames.get(i))).append("=?");
-      if (i + 1 < columnNames.size()) {
-        sb.append(",");
-      }
+    String[] columnNames = columns.length == 0 ? getColumnNames(entityClass, idAccessor, NOT_UPDATABLE) : columns;
+    SetClause[] setClauses = new SetClause[columnNames.length];
+    for (int i = 0; i < columnNames.length; i++) {
+      setClauses[i] = dml.setClause(columnNames[i], dml.updateSourceByExp(literals.param()));
     }
     
-    sb.append(where(Entities.getName(idAccessor)));
+    UpdateBySearchBuilder builder = dml.updateBySearch()
+      .setTargetTable(dml.createTargetTable(tables.tableName(Entities.getName(entityClass))))
+      .addSetClauses(setClauses);
+    builder.getWhereBuilder().and(bool.eq(this.columns.colName(Entities.getName(idAccessor)), literals.param()));
     
-    return sb.toString();
+    return builder.createExpression().toString();
   }
 
   public String where(String column, String... columns) {
@@ -106,7 +141,7 @@ public class SqlWriter {
     return identifier;
   }
 
-  private List<String> getColumnNames(Class<?> entityClass, AccessibleObject idAccessor, ColumnIgnorer columnIgnorer) {
+  private String[] getColumnNames(Class<?> entityClass, AccessibleObject idAccessor, ColumnIgnorer columnIgnorer) {
     List<String> columnNames = new ArrayList<String>();
     try {
       if (idAccessor instanceof Field) {
@@ -128,7 +163,7 @@ public class SqlWriter {
     } catch (IntrospectionException e) {
       throw new RuntimeException(e);
     }
-    return columnNames;
+    return columnNames.toArray(new String[0]);
   }
   
   private boolean isIgnorable(AccessibleObject accessibleObject) {

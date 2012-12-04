@@ -123,7 +123,7 @@ public class JpaQueryRunner {
    */
   public <T> T query(Class<T> entityClass, Object primaryKey) {
     try {
-      return entityClass.cast(queryRunner.query(sqlWriter.selectById(entityClass, primaryKey), new BeanHandler<T>(
+      return entityClass.cast(queryRunner.query(sqlWriter.selectById(entityClass), new BeanHandler<T>(
           entityClass, rowProcessor), primaryKey));
     } catch (SQLException e) {
       throw new RuntimeException(e);
