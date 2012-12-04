@@ -94,6 +94,9 @@ public class SqlWriter {
     return builder.createExpression().toString();
   }
 
+  /**
+   * @param columns Optional. If omitted, all columns are updated, except the ones marked with @Column(updatable=false)
+   */
   public String updateById(Class<?> entityClass, String... columns) {
     AccessibleObject idAccessor = Entities.getIdAccessor(entityClass);
     String[] columnNames = columns.length == 0 ? getColumnNames(entityClass, idAccessor, NOT_UPDATABLE) : columns;
