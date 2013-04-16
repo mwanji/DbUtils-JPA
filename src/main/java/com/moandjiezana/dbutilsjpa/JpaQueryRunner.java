@@ -1,5 +1,7 @@
 package com.moandjiezana.dbutilsjpa;
 
+import com.moandjiezana.dbutilsjpa.internal.PropertyDescriptorWrapper;
+
 import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
@@ -17,8 +19,6 @@ import org.apache.commons.dbutils.ResultSetHandler;
 import org.apache.commons.dbutils.RowProcessor;
 import org.apache.commons.dbutils.handlers.BeanHandler;
 import org.apache.commons.dbutils.handlers.ScalarHandler;
-
-import com.moandjiezana.dbutilsjpa.internal.PropertyDescriptorWrapper;
 
 /**
  * Provides a JPA-friendly interface to the underlying QueryRunner.
@@ -56,9 +56,9 @@ public class JpaQueryRunner {
   private final NewEntityTester entityTester;
   private final RowProcessor rowProcessor;
   private final ResultSetHandler<?> generatedKeysHandler;
-  
+
   public static class Builder {
-    
+
     private SqlWriter sqlWriter;
     private NewEntityTester entityTester;
     private ResultSetHandler<?> generatedKeysHandler;
@@ -67,27 +67,27 @@ public class JpaQueryRunner {
     public JpaQueryRunner build(QueryRunner queryRunner) {
       return new JpaQueryRunner(queryRunner, choose(this.sqlWriter, DEFAULT_SQL_WRITER), choose(this.entityTester, DEFAULT_ENTITY_TESTER), choose(this.rowProcessor, DEFAULT_ROW_PROCESSOR), choose(this.generatedKeysHandler, DEFAULT_GENERATED_KEYS_HANDLER));
     }
-    
+
     public Builder sqlWriter(SqlWriter sqlWriter) {
       this.sqlWriter = sqlWriter;
       return this;
     }
-    
+
     public Builder entityTester(NewEntityTester entityTester) {
       this.entityTester = entityTester;
       return this;
     }
-    
+
     public Builder generatedKeysHandler(ResultSetHandler<?> generatedKeysHandler) {
       this.generatedKeysHandler = generatedKeysHandler;
       return this;
     }
-    
+
     public Builder rowProcessor(RowProcessor rowProcessor) {
       this.rowProcessor = rowProcessor;
       return this;
     }
-    
+
     private <T> T choose(T value, T fallback) {
       return value != null ? value : fallback;
     }
@@ -110,7 +110,7 @@ public class JpaQueryRunner {
    * Find by primary key. Search for an entity of the specified class and
    * primary key. If the entity instance is contained in the persistence
    * context, it is returned from there.
-   * 
+   *
    * @param entityClass
    *          entity class
    * @param primaryKey
@@ -132,7 +132,7 @@ public class JpaQueryRunner {
 
   /**
    * Insert if new, update if already exists.
-   * 
+   *
    * @param entity
    * @return The number of rows updated
    */
@@ -150,11 +150,11 @@ public class JpaQueryRunner {
       } else {
         propertyDescriptorWrappers = PropertyDescriptorWrapper.getPropertyDescriptorsFromFields(entityClass);
       }
-      
+
       for (PropertyDescriptorWrapper propertyDescriptorWrapper : propertyDescriptorWrappers) {
         AccessibleObject accessibleObject = propertyDescriptorWrapper.getAccessibleObject();
         Member member = propertyDescriptorWrapper.getMember();
-        
+
         if (!Entities.isMapped(member.getDeclaringClass()) || Entities.isRelation(accessibleObject)) {
           continue;
         }
@@ -163,14 +163,14 @@ public class JpaQueryRunner {
           idPropertyDescriptor = propertyDescriptorWrapper;
           continue;
         }
-        
+
         if (isNotSettable(isNew, accessibleObject)) {
           continue;
         }
-        
+
         relevantPropertyDescriptors.add(propertyDescriptorWrapper);
       }
-      
+
       if (!isNew) {
         relevantPropertyDescriptors.add(idPropertyDescriptor);
       }
@@ -187,7 +187,7 @@ public class JpaQueryRunner {
       if (isNew) {
         Object newId = queryRunner.insert(sqlWriter.insert(entityClass), generatedKeysHandler, args);
         idPropertyDescriptor.set(entity, newId);
-        
+
         return 1;
       } else {
         return queryRunner.update(sqlWriter.updateById(entityClass), args);
@@ -204,7 +204,7 @@ public class JpaQueryRunner {
       throw new RuntimeException(e);
     }
   }
-  
+
   private boolean isNotSettable(boolean isNew, AccessibleObject accessibleObject) {
     return (isNew && accessibleObject.isAnnotationPresent(Column.class) && !accessibleObject.getAnnotation(Column.class).insertable()) || (!isNew && accessibleObject.isAnnotationPresent(Column.class) && !accessibleObject.getAnnotation(Column.class).updatable());
   }

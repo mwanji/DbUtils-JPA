@@ -1,5 +1,7 @@
 package com.moandjiezana.dbutilsjpa;
 
+import com.moandjiezana.dbutilsjpa.internal.PropertyDescriptorWrapper;
+
 import java.beans.PropertyDescriptor;
 import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.Constructor;
@@ -19,8 +21,6 @@ import java.util.Map;
 import javax.persistence.Entity;
 
 import org.apache.commons.dbutils.BeanProcessor;
-
-import com.moandjiezana.dbutilsjpa.internal.PropertyDescriptorWrapper;
 
 public class JpaBeanProcessor extends BeanProcessor {
 
@@ -57,9 +57,9 @@ public class JpaBeanProcessor extends BeanProcessor {
   public JpaBeanProcessor() {
     this("_id");
   }
-  
+
   /**
-   * @param foreignKeySuffix appended to the names of join columns when no name is explicitly specified in an annotation 
+   * @param foreignKeySuffix appended to the names of join columns when no name is explicitly specified in an annotation
    */
   public JpaBeanProcessor(String foreignKeySuffix) {
     this.foreignKeySuffix = foreignKeySuffix;
@@ -83,7 +83,7 @@ public class JpaBeanProcessor extends BeanProcessor {
     if (!rs.next()) {
       return Collections.emptyList();
     }
-    
+
     List<T> results = new ArrayList<T>();
 
     PropertyDescriptorWrapper[] props = propertyDescriptors(type);
@@ -167,7 +167,7 @@ public class JpaBeanProcessor extends BeanProcessor {
 
   /**
    * Creates a new object and initializes its fields from the ResultSet.
-   * 
+   *
    * @param <T>
    *          The type of bean to create
    * @param rs
@@ -199,7 +199,7 @@ public class JpaBeanProcessor extends BeanProcessor {
       if (Entities.isRelation(accessibleObject)) {
         String tableName = Entities.getName(prop.getPropertyType());
         ResultSetMetaData metaData = rs.getMetaData();
-        
+
         if (Entities.isToOneRelation(accessibleObject)) {
           Class<?> joinType = prop.getPropertyType();
           PropertyDescriptorWrapper[] joinPropertyDescriptors = propertyDescriptors(joinType);
@@ -207,15 +207,15 @@ public class JpaBeanProcessor extends BeanProcessor {
             if (!tableName.equalsIgnoreCase(metaData.getTableName(j))) {
               continue;
             }
-            
+
             String joinColumnName = metaData.getColumnLabel(j);
-            
+
             for (PropertyDescriptorWrapper joinPropertyDescriptor : joinPropertyDescriptors) {
               if (Entities.getName(joinPropertyDescriptor.getAccessibleObject()).equalsIgnoreCase(joinColumnName)) {
                 if (value == null) {
                   value = newInstance(joinType);
                 }
-                
+
                 callSetter(value, joinPropertyDescriptor, processColumn(rs, j, joinPropertyDescriptor.getPropertyType()));
                 break;
               }
@@ -224,7 +224,7 @@ public class JpaBeanProcessor extends BeanProcessor {
         }
       } else {
         value = this.processColumn(rs, i, propType);
-        
+
         if (propType != null && value == null && propType.isPrimitive()) {
           value = primitiveDefaults.get(propType);
         }
@@ -239,7 +239,7 @@ public class JpaBeanProcessor extends BeanProcessor {
   /**
    * Calls the setter method on the target object for the given property. If no
    * setter method exists for the property, this method does nothing.
-   * 
+   *
    * @param target
    *          The object to set the property on.
    * @param prop
@@ -250,7 +250,7 @@ public class JpaBeanProcessor extends BeanProcessor {
    *           if an error occurs setting the property.
    */
   private void callSetter(Object target, PropertyDescriptorWrapper prop, Object value) throws SQLException {
-    
+
     Class<?> parameterType = prop.getPropertyType();
     try {
       // convert types for some popular ones
@@ -291,7 +291,7 @@ public class JpaBeanProcessor extends BeanProcessor {
    * This method returns true if the value can be successfully passed into the
    * setter method. Remember, Method.invoke() handles the unwrapping of Integer
    * into an int.
-   * 
+   *
    * @param value
    *          The value to be passed into the setter method.
    * @param type
