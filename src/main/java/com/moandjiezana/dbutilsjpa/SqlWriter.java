@@ -1,9 +1,10 @@
 package com.moandjiezana.dbutilsjpa;
 
+import co.mewf.sqlwriter.Queries;
+
 import java.beans.IntrospectionException;
 import java.beans.Introspector;
 import java.beans.PropertyDescriptor;
-import java.io.IOException;
 import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.Field;
 import java.lang.reflect.Member;
@@ -15,87 +16,26 @@ import java.util.Map;
 
 import javax.persistence.Column;
 
-import org.sql.generation.api.grammar.builders.booleans.BooleanBuilder;
-import org.sql.generation.api.grammar.builders.modification.DeleteBySearchBuilder;
-import org.sql.generation.api.grammar.builders.modification.UpdateBySearchBuilder;
-import org.sql.generation.api.grammar.builders.query.OrderByBuilder;
-import org.sql.generation.api.grammar.builders.query.SimpleQueryBuilder;
-import org.sql.generation.api.grammar.factories.BooleanFactory;
-import org.sql.generation.api.grammar.factories.ColumnsFactory;
-import org.sql.generation.api.grammar.factories.LiteralFactory;
-import org.sql.generation.api.grammar.factories.ModificationFactory;
-import org.sql.generation.api.grammar.factories.QueryFactory;
-import org.sql.generation.api.grammar.factories.TableReferenceFactory;
-import org.sql.generation.api.grammar.literals.DirectLiteral;
-import org.sql.generation.api.grammar.modification.SetClause;
-import org.sql.generation.api.grammar.query.Ordering;
-import org.sql.generation.api.vendor.MySQLVendor;
-import org.sql.generation.api.vendor.SQLVendor;
-import org.sql.generation.api.vendor.SQLVendorProvider;
-
 public class SqlWriter {
-  
-  private final SQLVendor sqlVendor;
-  private final ColumnsFactory columns;
-  private final LiteralFactory literals;
-  private final TableReferenceFactory tables;
-  private final BooleanFactory bool;
-  private ModificationFactory dml;
-  
-  public SqlWriter() {
-    this(MySQLVendor.class);
-  }
-  
-  public SqlWriter(Class<? extends SQLVendor> vendorClass) {
-    try {
-      sqlVendor = SQLVendorProvider.createVendor(vendorClass);
-      columns = sqlVendor.getColumnsFactory();
-      literals = sqlVendor.getLiteralFactory();
-      tables = sqlVendor.getTableReferenceFactory();
-      bool = sqlVendor.getBooleanFactory();
-      dml = sqlVendor.getModificationFactory();
-    } catch (IOException e) {
-      throw new RuntimeException(e);
-    }
-  }
 
   public String selectById(Class<?> entityClass) {
     AccessibleObject idAccessor = Entities.getIdAccessor(entityClass);
-    if (!idAccessor.isAccessible()) {
-      idAccessor.setAccessible(true);
-    }
-    String idColumnName = Entities.getName(idAccessor);
-    
-    SimpleQueryBuilder sql = sqlVendor.getQueryFactory().simpleQueryBuilder();
-    return sql.selectAllColumns()
-        .from(tables.tableName(Entities.getName(entityClass)))
-        .where(bool.eq(columns.colName(idColumnName), literals.param()))
-        .createExpression().toString();
+
+    return Queries.select().from(entityClass).where().eq(Entities.getName(idAccessor)).toString();
   }
 
   public String select(Class<?> entityClass) {
-    return sqlVendor.getQueryFactory().simpleQueryBuilder().selectAllColumns().from(tables.tableName(Entities.getName(entityClass))).createExpression().toString();
+    return Queries.select().from(entityClass).toString();
   }
 
   public String insert(Class<?> entityClass) {
     String[] columnNames = getColumnNames(entityClass, Entities.getIdAccessor(entityClass), NOT_INSERTABLE);
-    DirectLiteral[] values = new DirectLiteral[columnNames.length];
-    for (int i = 0; i < columnNames.length; i++) {
-      values[i] = literals.param();
-    }
-    
-    return dml.insert().setTableName(tables.tableName(Entities.getName(entityClass)))
-      .setColumnSource(dml.columnSourceByValues()
-        .addColumnNames(columnNames)
-        .addValues(values).createExpression())
-      .createExpression().toString();
+
+    return Queries.insert(entityClass).columns(columnNames).toString();
   }
 
   public String deleteById(Class<?> entityClass) {
-    DeleteBySearchBuilder builder = dml.deleteBySearch().setTargetTable(dml.createTargetTable(tables.tableName(Entities.getName(entityClass))));
-    builder.getWhere().and(bool.eq(columns.colName(Entities.getName(Entities.getIdAccessor(entityClass))), literals.param()));
-    
-    return builder.createExpression().toString();
+    return Queries.delete(entityClass).where().eq(Entities.getName(Entities.getIdAccessor(entityClass))).toString();
   }
 
   /**
@@ -104,48 +44,10 @@ public class SqlWriter {
   public String updateById(Class<?> entityClass, String... columns) {
     AccessibleObject idAccessor = Entities.getIdAccessor(entityClass);
     String[] columnNames = columns.length == 0 ? getColumnNames(entityClass, idAccessor, NOT_UPDATABLE) : columns;
-    SetClause[] setClauses = new SetClause[columnNames.length];
-    for (int i = 0; i < columnNames.length; i++) {
-      setClauses[i] = dml.setClause(columnNames[i], dml.updateSourceByExp(literals.param()));
-    }
-    
-    UpdateBySearchBuilder builder = dml.updateBySearch()
-      .setTargetTable(dml.createTargetTable(tables.tableName(Entities.getName(entityClass))))
-      .addSetClauses(setClauses);
-    builder.getWhereBuilder().and(bool.eq(this.columns.colName(Entities.getName(idAccessor)), literals.param()));
-    
-    return builder.createExpression().toString();
+
+    return Queries.update(entityClass).set(columnNames).where().eq(Entities.getName(idAccessor)).toString();
   }
 
-  public String where(String column, String... columns) {
-    BooleanBuilder booleanBuilder = bool.booleanBuilder(bool.eq(this.columns.colName(column), literals.param()));
-    for (String otherColumn : columns) {
-      booleanBuilder.and(bool.eq(this.columns.colName(otherColumn), literals.param()));
-    }
-
-    return " WHERE " + booleanBuilder.createExpression().toString();
-  }
-  
-  public String asc(String column, String... columns) {
-    return orderBy(column, Ordering.ASCENDING, columns);
-  }
-
-  public String desc(String column, String... columns) {
-    return orderBy(column, Ordering.DESCENDING, columns);
-  }
-
-  private String orderBy(String column, Ordering ordering, String... columns) {
-    QueryFactory queries = sqlVendor.getQueryFactory();
-    OrderByBuilder builder = queries.orderByBuilder();
-    builder.addSortSpecs(queries.sortSpec(this.columns.colName(column), ordering));
-    
-    for (String columnName : columns) {
-      builder.addSortSpecs(queries.sortSpec(this.columns.colName(columnName), ordering));
-    }
-    
-    return builder.createExpression().toString();
-  }
-  
   private String[] getColumnNames(Class<?> entityClass, AccessibleObject idAccessor, ColumnIgnorer columnIgnorer) {
     List<String> columnNames = new ArrayList<String>();
     try {
@@ -170,26 +72,26 @@ public class SqlWriter {
     }
     return columnNames.toArray(new String[0]);
   }
-  
+
   private boolean isIgnorable(AccessibleObject accessibleObject) {
     return Entities.isStatic(((Member) accessibleObject)) || !Entities.isMapped(((Member) accessibleObject).getDeclaringClass()) || Entities.isTransient(accessibleObject) || Entities.isIdAccessor(accessibleObject) || Entities.isRelation(accessibleObject);
   }
-  
+
   private boolean isMultiValued(Class<?> type) {
     return Collection.class.isAssignableFrom(type) || Map.class.isAssignableFrom(type);
   }
-  
+
   private static interface ColumnIgnorer {
     boolean ignore(AccessibleObject object);
   }
-  
+
   private static final ColumnIgnorer NOT_UPDATABLE = new ColumnIgnorer() {
     @Override
     public boolean ignore(AccessibleObject object) {
       return object.isAnnotationPresent(Column.class) && !object.getAnnotation(Column.class).updatable();
     }
   };
-  
+
   private static final ColumnIgnorer NOT_INSERTABLE = new ColumnIgnorer() {
     @Override
     public boolean ignore(AccessibleObject object) {

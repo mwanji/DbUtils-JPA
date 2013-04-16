@@ -13,32 +13,32 @@ import org.junit.Test;
 public class SqlWriterUpdateTest {
 
   private final SqlWriter sqlWriter = new SqlWriter();
-  
+
   @Test
   public void should_ignore_id() {
     String sql = sqlWriter.updateById(SimpleEntity.class);
-    
-    assertEquals("UPDATE SimpleEntity SET name = ? WHERE id = ?", Utils.singleLine(sql));
+
+    assertEquals("UPDATE SimpleEntity SET SimpleEntity.name = ? WHERE SimpleEntity.id = ?", Utils.singleLine(sql));
   }
-  
+
   @Test
   public void should_ignore_relations() {
     String sql = sqlWriter.updateById(EntityWithRelations.class);
-    
-    assertEquals("UPDATE EntityWithRelations SET name = ? WHERE pk = ?", Utils.singleLine(sql));
+
+    assertEquals("UPDATE EntityWithRelations SET EntityWithRelations.name = ? WHERE EntityWithRelations.pk = ?", Utils.singleLine(sql));
   }
-  
+
   @Test
   public void should_use_property_annotations() {
     String sql = sqlWriter.updateById(CustomNamePropertyEntity.class);
-    
-    assertEquals("UPDATE myTableName SET customDateColumn = ? WHERE customNameId = ?", Utils.singleLine(sql));
+
+    assertEquals("UPDATE myTableName SET myTableName.customDateColumn = ? WHERE myTableName.customNameId = ?", Utils.singleLine(sql));
   }
-  
+
   @Test
   public void should_update_specified_columns() {
     String sql = sqlWriter.updateById(MultiplePropertyEntity.class, "age");
-    
-    assertEquals("UPDATE MultiplePropertyEntity SET age = ? WHERE id = ?", Utils.singleLine(sql));
+
+    assertEquals("UPDATE MultiplePropertyEntity SET MultiplePropertyEntity.age = ? WHERE MultiplePropertyEntity.id = ?", Utils.singleLine(sql));
   }
 }

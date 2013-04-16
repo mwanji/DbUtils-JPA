@@ -74,9 +74,9 @@
     	<scope>test</scope>
     </dependency>
     <dependency>
-    	<groupId>org.java-sql-generator</groupId>
-    	<artifactId>org.java-sql-generator.implementation</artifactId>
-    	<version>0.3.2</version>
+      <groupId>co.mewf.sqlwriter</groupId>
+      <artifactId>sql-writer</artifactId>
+      <version>1.0.0-SNAPSHOT</version>
     </dependency>
   </dependencies>
 </project>

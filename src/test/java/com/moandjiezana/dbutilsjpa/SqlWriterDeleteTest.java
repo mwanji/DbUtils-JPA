@@ -13,15 +13,15 @@ public class SqlWriterDeleteTest {
   @Test
   public void should_delete() {
     String sql = sqlWriter.deleteById(SimpleEntity.class);
-    
-    assertEquals("DELETE FROM SimpleEntity\nWHERE id = ?", sql);
+
+    assertEquals("DELETE FROM SimpleEntity WHERE SimpleEntity.id = ?", sql);
   }
 
   @Test
   public void should_use_annotations_on_property() {
     String sql = sqlWriter.deleteById(CustomNamePropertyEntity.class);
-    
-    assertEquals("DELETE FROM myTableName\nWHERE customNameId = ?", sql);
+
+    assertEquals("DELETE FROM myTableName WHERE myTableName.customNameId = ?", sql);
   }
 
 }
