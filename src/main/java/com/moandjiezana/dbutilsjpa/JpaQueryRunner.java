@@ -37,7 +37,6 @@ public class JpaQueryRunner {
       try {
         if (idAccessor instanceof Field) {
           Field field = (Field) idAccessor;
-          field.setAccessible(true);
 
           return field.get(entity) == null;
         } else {
