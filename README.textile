@@ -7,7 +7,7 @@ DbUtils-JPA currently relies on "my fork of DbUtils":https://github.com/mwanji/D
 h2. Main classes
 
 * "JpaBeanProcessor":https://github.com/mwanji/DbUtils-JPA/blob/master/src/main/java/com/moandjiezana/dbutilsjpa/JpaBeanProcessor.java uses JPA annotations to convert a java.sql.ResultSet to an @Entity.
-* "SqlWriter":https://github.com/mwanji/DbUtils-JPA/blob/master/src/main/java/com/moandjiezana/dbutilsjpa/SqlWriter.java generates SQL based on the annotations.
+* "SqlWriter":https://github.com/mwanji/DbUtils-JPA/blob/master/src/main/java/com/moandjiezana/dbutilsjpa/SqlWriter.java uses "sql-writer":https://github.com/mewf/sql-writer to generate SQL.
 * "JpaQueryRunner":https://github.com/mwanji/DbUtils-JPA/blob/master/src/main/java/com/moandjiezana/dbutilsjpa/JpaQueryRunner.java provides a friendly, but limited, interface for common operations: get by id, update, insert and delete.
 
 h2. Example

@@ -8,19 +8,19 @@ import javax.persistence.OneToOne;
 
 @Entity
 public class EntityWithJoin {
-  
+
   @Id
   public Long id;
 
-  @ManyToOne
+  @ManyToOne @JoinColumn(name = "simple_id")
   public SimpleEntity simple;
-  
+
   @ManyToOne @JoinColumn(name = "custom_enum_fk")
   public EnumEntity enumEntity;
-  
+
   @OneToOne
   public MultiplePropertyEntity oneToOne;
-  
+
   @ManyToOne
   public NonUpdatableEntity customSuffix;
 }

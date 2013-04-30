@@ -76,7 +76,7 @@
     <dependency>
       <groupId>co.mewf.sqlwriter</groupId>
       <artifactId>sql-writer</artifactId>
-      <version>1.0.0-SNAPSHOT</version>
+      <version>0.1.0</version>
     </dependency>
   </dependencies>
 </project>
